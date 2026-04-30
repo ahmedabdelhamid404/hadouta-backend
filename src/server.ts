@@ -3,6 +3,7 @@ import { serve } from '@hono/node-server';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { auth } from './auth/index.js';
 import { healthRoute } from './routes/health.js';
 import { waitlistRoute } from './routes/waitlist.js';
 
@@ -17,6 +18,10 @@ app.use(
     credentials: true,
   }),
 );
+
+// Better-Auth handler — must be registered first so /api/auth/* requests
+// flow through it before any other route group can intercept them.
+app.on(['POST', 'GET'], '/api/auth/*', (c) => auth.handler(c.req.raw));
 
 // Routes
 app.route('/health', healthRoute);

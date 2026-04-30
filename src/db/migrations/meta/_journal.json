@@ -8,6 +8,13 @@
       "when": 1777585956932,
       "tag": "0000_violet_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777587877145,
+      "tag": "0001_abnormal_calypso",
+      "breakpoints": true
     }
   ]
 }

@@ -111,6 +111,50 @@ The non-negotiable principles live in `.specify/memory/constitution.md`. Read be
 
 ---
 
+## Auth
+
+Better-Auth is mounted at **`/api/auth/*`** on the same Hono server. It handles email/password sign-up + sign-in, Google OAuth (when credentials are set), and email verification via Resend.
+
+### Environment variables
+
+Required:
+- `BETTER_AUTH_SECRET` — generate via `openssl rand -base64 32`
+
+Optional (auth still works without them):
+- `BETTER_AUTH_URL` — defaults to `http://localhost:3001`
+- `FRONTEND_URL` — defaults to `http://localhost:3000` (used for CORS + trusted origins)
+- `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` — both must be set together to enable Google OAuth
+- `RESEND_API_KEY` — when blank, verification/reset emails are logged to stdout instead
+- `RESEND_FROM_EMAIL` — defaults to `Hadouta <noreply@mail.hadouta.com>`
+
+In dev (`NODE_ENV !== 'production'`) email verification is **not required** before sign-in so local flows aren't blocked when Resend isn't wired. In production, email verification is enforced.
+
+### Quick smoke test (curl)
+
+Sign up:
+
+```bash
+curl -X POST http://localhost:3001/api/auth/sign-up/email \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Test","email":"smoketest@example.com","password":"abcd1234"}'
+```
+
+Sign in:
+
+```bash
+curl -X POST http://localhost:3001/api/auth/sign-in/email \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"smoketest@example.com","password":"abcd1234"}'
+```
+
+Both return JSON with the user object and a session token; sign-up also sets a session cookie.
+
+### Enabling Google OAuth
+
+Create an OAuth 2.0 Client ID in [Google Cloud Console](https://console.cloud.google.com/apis/credentials) with redirect URI `http://localhost:3001/api/auth/callback/google` (and the production equivalent). Set `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` in `.env`. The provider auto-registers on next server boot.
+
+---
+
 ## Useful scripts
 
 ```bash
