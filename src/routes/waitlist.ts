@@ -1,24 +1,47 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
+import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
+import {
+  WaitlistSignupRequestSchema,
+  WaitlistSignupResponseSchema,
+} from '../schemas/waitlist.js';
 
-export const waitlistRoute = new Hono();
+export const waitlistRoute = new OpenAPIHono();
 
-const WaitlistSignupSchema = z.object({
-  email: z.string().email('بريد إلكتروني غير صحيح'),
-  phone: z
-    .string()
-    .regex(/^(\+?20|0)?1[0-25]\d{8}$/, 'رقم هاتف مصري غير صحيح')
-    .optional(),
-  name: z.string().min(1).max(100).optional(),
-  source: z.string().max(100).optional(), // UTM source for attribution
+const createWaitlistSignupRoute = createRoute({
+  method: 'post',
+  path: '/',
+  tags: ['waitlist'],
+  summary: 'Join the waitlist',
+  description:
+    'Persist a waitlist signup (email + optional phone + optional name + optional UTM source). Sprint 1 placeholder logs to console; Sprint 2 will write to Neon.',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: WaitlistSignupRequestSchema,
+        },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    201: {
+      description: 'Signup recorded',
+      content: {
+        'application/json': {
+          schema: WaitlistSignupResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: 'Validation error',
+    },
+  },
 });
 
-waitlistRoute.post('/', zValidator('json', WaitlistSignupSchema), async (c) => {
+waitlistRoute.openapi(createWaitlistSignupRoute, (c) => {
   const data = c.req.valid('json');
 
-  // TODO: persist to Neon DB (Sprint 1, after Drizzle schema migrations run)
-  // For now, log and return success so the frontend form works during dev.
+  // TODO Sprint 2: persist to Neon DB via Drizzle. Console log is the placeholder.
   console.log('[waitlist] new signup:', {
     email: data.email,
     phone: data.phone,
@@ -30,7 +53,8 @@ waitlistRoute.post('/', zValidator('json', WaitlistSignupSchema), async (c) => {
   return c.json(
     {
       ok: true,
-      message: 'مرحباً بك في قائمة الانتظار! سنبعث لك إشعار بمجرد إطلاق المنصة.',
+      message:
+        'مرحباً بك في قائمة الانتظار! سنبعث لك إشعار بمجرد إطلاق المنصة.',
     },
     201,
   );
