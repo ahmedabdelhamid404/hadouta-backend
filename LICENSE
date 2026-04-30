@@ -1,0 +1,31 @@
+Hadouta (حدوتة) — Proprietary License
+Copyright (c) 2026 Ahmed Abdelhameed. All rights reserved.
+
+This source code is made publicly viewable for transparency and educational
+purposes. It is NOT licensed for:
+
+- Redistribution in source or binary form
+- Commercial use by anyone other than the copyright holder
+- Creation of derivative works
+- Republication, mirroring, or use in training models for commercial purposes
+
+You MAY:
+- Read the code
+- Reference architectural patterns in your own (non-derivative) work with
+  proper attribution
+- Submit issues, suggestions, or pull requests for improvements
+
+You MAY NOT:
+- Run a similar or competing service using this code or its derivatives
+- Use any portion of this code in a commercial product without explicit
+  written permission from the copyright holder
+
+For licensing inquiries: contact the copyright holder.
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING
+FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
