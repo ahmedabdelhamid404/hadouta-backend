@@ -1,0 +1,74 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "WebSearch",
+      "WebFetch",
+
+      "Bash(pnpm *)",
+      "Bash(pnpm)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(tsx *)",
+
+      "Bash(git *)",
+      "Bash(gh *)",
+
+      "Bash(drizzle-kit *)",
+      "Bash(npx drizzle-kit *)",
+
+      "Bash(uv *)",
+      "Bash(uvx *)",
+      "Bash(specify *)",
+
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(http *)",
+
+      "Bash(docker *)",
+      "Bash(docker-compose *)",
+      "Bash(psql *)",
+
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(find *)",
+      "Bash(awk *)",
+      "Bash(sed *)",
+      "Bash(jq *)",
+      "Bash(echo *)",
+      "Bash(pwd)",
+      "Bash(which *)",
+      "Bash(whoami)",
+      "Bash(date *)",
+      "Bash(env)",
+      "Bash(printenv *)",
+      "Bash(mkdir *)",
+      "Bash(touch *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+
+      "Edit",
+      "Write",
+      "Skill(*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf ~/*)",
+      "Bash(sudo rm -rf *)",
+      "Bash(git push --force *)",
+      "Bash(git reset --hard origin/main)",
+      "Bash(dropdb *)",
+      "Bash(drop database *)",
+      "Bash(drizzle-kit drop *)"
+    ]
+  }
+}
