@@ -1,4 +1,5 @@
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
+import { db, schema } from '../db/index.js';
 import {
   WaitlistSignupRequestSchema,
   WaitlistSignupResponseSchema,
@@ -38,17 +39,20 @@ const createWaitlistSignupRoute = createRoute({
   },
 });
 
-waitlistRoute.openapi(createWaitlistSignupRoute, (c) => {
+waitlistRoute.openapi(createWaitlistSignupRoute, async (c) => {
   const data = c.req.valid('json');
 
-  // TODO Sprint 2: persist to Neon DB via Drizzle. Console log is the placeholder.
-  console.log('[waitlist] new signup:', {
-    email: data.email,
-    phone: data.phone,
-    name: data.name,
-    source: data.source,
-    received_at: new Date().toISOString(),
-  });
+  const [row] = await db
+    .insert(schema.waitlistSignups)
+    .values({
+      email: data.email,
+      phone: data.phone,
+      name: data.name,
+      source: data.source,
+    })
+    .returning({ id: schema.waitlistSignups.id });
+
+  console.log('[waitlist] persisted signup', { id: row?.id, email: data.email });
 
   return c.json(
     {
