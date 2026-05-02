@@ -316,9 +316,15 @@ export const photos = pgTable("photos", {
 // not 16, 1 retry not 3). Production switches via admin UI.
 export const aiSettings = pgTable("ai_settings", {
   id: text("id").primaryKey().default("singleton"),
-  storyModel: text("story_model").notNull().default("claude-haiku-4-5"),
+  // Story model defaults to OpenAI for dev (Ahmed has OpenAI credits per
+  // session 9.5 directive). Production switches to Claude via admin panel.
+  storyModel: text("story_model").notNull().default("gpt-4o-mini"),
   storyMaxTokens: integer("story_max_tokens").notNull().default(4000),
-  illustrationModel: text("illustration_model").notNull().default("nano-banana"),
+  // Illustration model defaults to Google direct (Nano Banana = Gemini 2.5
+  // Flash Image). fal.ai is alternative; admin panel toggles.
+  illustrationModel: text("illustration_model")
+    .notNull()
+    .default("gemini-2.5-flash-image"),
   illustrationCount: integer("illustration_count").notNull().default(8),
   maxRetries: integer("max_retries").notNull().default(1),
   allowIllustrationFallback: boolean("allow_illustration_fallback")

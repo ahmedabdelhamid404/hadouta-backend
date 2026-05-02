@@ -19,12 +19,14 @@
     "db:studio": "drizzle-kit studio",
     "db:seed:moral-values": "tsx src/scripts/seed-moral-values.ts",
     "db:seed:themes": "tsx src/scripts/seed-themes.ts",
+    "db:seed:ai-settings": "tsx src/scripts/seed-ai-settings.ts",
     "openapi:export": "tsx src/scripts/export-openapi.ts > openapi.json"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.0.0",
     "@anthropic-ai/sdk": "^0.92.0",
     "@fal-ai/client": "^1.10.0",
+    "@google/genai": "^1.51.0",
     "@hono/node-server": "^1.13.0",
     "@hono/zod-openapi": "^0.18.0",
     "@hono/zod-validator": "^0.4.0",
@@ -35,6 +37,7 @@
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.36.0",
     "hono": "^4.6.0",
+    "openai": "^6.35.0",
     "postgres": "^3.4.0",
     "resend": "^6.12.2",
     "zod": "^3.23.0"
