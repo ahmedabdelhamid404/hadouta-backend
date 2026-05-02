@@ -13,6 +13,9 @@ import { ordersRouter } from './routes/orders.js';
 import { catalogRouter } from './routes/catalog.js';
 import { photosRouter } from './routes/photos.js';
 import { paymentsRouter } from './routes/payments.js';
+import { adminGenerationsRouter } from './routes/admin-generations.js';
+import { adminEventsRouter } from './routes/admin-events.js';
+import { meRouter } from './routes/me.js';
 
 const app = new OpenAPIHono();
 
@@ -37,6 +40,9 @@ app.route('/api/orders', ordersRouter);
 app.route('/api/catalog', catalogRouter);
 app.route('/api/photos', photosRouter);
 app.route('/api/payments', paymentsRouter);
+app.route('/api/admin/generations', adminGenerationsRouter);
+app.route('/api/admin/events', adminEventsRouter);
+app.route('/api/me', meRouter);
 
 // OpenAPI spec endpoint — frontend pulls types from here via openapi-typescript
 app.doc('/openapi.json', {

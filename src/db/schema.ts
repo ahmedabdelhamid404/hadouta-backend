@@ -48,6 +48,12 @@ export const user = pgTable("user", {
 
   // Custom fields (configured via additionalFields in src/auth/index.ts)
   role: varchar("role", { length: 20 }).notNull().default("customer"),
+  // Sprint 2 — admin invite flow. New users created by an admin's invite get
+  // default password "1234" and must_change_password=true; on first login the
+  // admin app routes them to the change-password screen before the dashboard.
+  mustChangePassword: boolean("must_change_password")
+    .$defaultFn(() => false)
+    .notNull(),
 });
 
 export const session = pgTable("session", {

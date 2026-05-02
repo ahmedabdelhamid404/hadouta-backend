@@ -145,6 +145,12 @@ export const auth = betterAuth({
         required: false,
         input: false,
       },
+      mustChangePassword: {
+        type: "boolean",
+        required: false,
+        defaultValue: false,
+        input: false, // server-managed (set by invite flow, cleared by change-password)
+      },
     },
   },
 

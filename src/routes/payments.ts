@@ -11,6 +11,7 @@ import {
   verifyWebhookHmac,
   isPaymobConfigured,
 } from "../lib/paymob.js";
+import { kickoffGenerationIfNeeded } from "../jobs/generate-book.js";
 
 const PUBLIC_BACKEND_URL =
   process.env.PUBLIC_BACKEND_URL ??
@@ -175,6 +176,15 @@ paymentsRouter.post("/webhook", async (c) => {
     `[payments] webhook processed: orderId=${orderRef} status=${newStatus} (verified=${verified})`,
   );
 
+  // Auto-trigger AI generation on the first paid webhook. Idempotent —
+  // kickoffGenerationIfNeeded skips if a non-terminal generation already exists.
+  if (newStatus === "paid") {
+    const kickoff = await kickoffGenerationIfNeeded(orderRef);
+    console.log(
+      `[payments] generation kickoff: orderId=${orderRef} reason=${kickoff.reason} generationId=${kickoff.generationId ?? "—"}`,
+    );
+  }
+
   return c.json({ received: true });
 });
 
@@ -209,6 +219,13 @@ paymentsRouter.get("/return", async (c) => {
       .update(orders)
       .set({ status: "paid", paidAt: new Date(), updatedAt: new Date() })
       .where(eq(orders.id, hadoutaOrderId));
+    // Same kickoff as the webhook — the customer's browser may land here
+    // before Paymob fires the server-side webhook (Egyptian network latency
+    // patterns). Idempotent so duplicate webhook later is a no-op.
+    const kickoff = await kickoffGenerationIfNeeded(hadoutaOrderId);
+    console.log(
+      `[payments] return-callback generation kickoff: orderId=${hadoutaOrderId} reason=${kickoff.reason}`,
+    );
     return c.redirect(
       `${PUBLIC_FRONTEND_URL}/wizard/7?orderId=${hadoutaOrderId}`,
       302,

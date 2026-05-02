@@ -12,9 +12,13 @@ import { aiSettings } from "../db/schema";
 const DEV_DEFAULTS = {
   id: "singleton",
   storyModel: "gpt-4o-mini",
-  storyMaxTokens: 4000,
+  // 16 page bodies needs more output tokens than 8 — bumped accordingly.
+  storyMaxTokens: 8000,
   illustrationModel: "gemini-2.5-flash-image",
-  illustrationCount: 8,
+  // 16 body pages per brand spec / Sprint 2 plan. Cover is separate (not in
+  // this count). Was 8 during the very first dev iteration; bumped 2026-05-02
+  // after Ahmed flagged "story feels short."
+  illustrationCount: 16,
   maxRetries: 1,
   allowIllustrationFallback: true,
   autoApproveThreshold: null,
