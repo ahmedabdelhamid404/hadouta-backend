@@ -11,6 +11,7 @@ import { healthRoute } from './routes/health.js';
 import { waitlistRoute } from './routes/waitlist.js';
 import { ordersRouter } from './routes/orders.js';
 import { catalogRouter } from './routes/catalog.js';
+import { photosRouter } from './routes/photos.js';
 
 const app = new OpenAPIHono();
 
@@ -33,6 +34,7 @@ app.route('/health', healthRoute);
 app.route('/waitlist', waitlistRoute);
 app.route('/api/orders', ordersRouter);
 app.route('/api/catalog', catalogRouter);
+app.route('/api/photos', photosRouter);
 
 // OpenAPI spec endpoint — frontend pulls types from here via openapi-typescript
 app.doc('/openapi.json', {
