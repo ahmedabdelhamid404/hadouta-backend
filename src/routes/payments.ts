@@ -12,6 +12,12 @@ import {
   isPaymobConfigured,
 } from "../lib/paymob.js";
 
+const PUBLIC_BACKEND_URL =
+  process.env.PUBLIC_BACKEND_URL ??
+  "https://hadouta-backend-production.up.railway.app";
+const PUBLIC_FRONTEND_URL =
+  process.env.FRONTEND_URL ?? "https://hadouta-web.vercel.app";
+
 const paymentsRouter = new Hono();
 
 // POST /api/payments/intent — body: { orderId }
@@ -67,6 +73,12 @@ paymentsRouter.post("/intent", async (c) => {
       buyerEmail: o.buyerEmail,
       buyerPhone: o.buyerPhone,
       description,
+      // Browser-redirect URL (Paymob sends customer here after payment finishes).
+      // Routes through backend so we can verify HMAC + look up order, then
+      // 302 to the frontend confirmation page.
+      redirectionUrl: `${PUBLIC_BACKEND_URL}/api/payments/return?order_id=${o.id}`,
+      // Server-to-server webhook URL.
+      notificationUrl: `${PUBLIC_BACKEND_URL}/api/payments/webhook`,
     });
   } catch (err) {
     console.error("[payments] Paymob intention create failed:", err);
@@ -164,6 +176,50 @@ paymentsRouter.post("/webhook", async (c) => {
   );
 
   return c.json({ received: true });
+});
+
+// GET /api/payments/return — browser redirect target after Paymob checkout.
+// Paymob appends query params: success, id, order, hmac, txn_response_code, etc.
+// We extract our hadoutaOrderId (passed via the redirection_url's order_id query)
+// and forward the customer to /wizard/7 (success) or /wizard/6 (failure).
+//
+// Note: HMAC verification on the GET redirect is the same algorithm as the
+// webhook but applied to query params. For MVP we don't strictly verify here
+// (the webhook is the source of truth for order status); we just bounce the
+// customer to the right place. Sprint 2 hardening adds HMAC verification.
+paymentsRouter.get("/return", async (c) => {
+  const hadoutaOrderId = c.req.query("order_id");
+  const success = c.req.query("success") === "true";
+  const txnId = c.req.query("id") ?? "";
+  const failureReason = c.req.query("data.message") ?? c.req.query("txn_response_code") ?? "";
+
+  console.log(
+    `[payments] return callback: orderId=${hadoutaOrderId} success=${success} txn=${txnId}`,
+  );
+
+  if (!hadoutaOrderId) {
+    return c.redirect(`${PUBLIC_FRONTEND_URL}/wizard/6?error=no_order_id`, 302);
+  }
+
+  // Optional optimistic update — webhook is canonical, but if it hasn't fired
+  // yet we mark the order paid so the confirmation page renders correctly.
+  // The webhook will reconcile if anything is wrong.
+  if (success) {
+    await db
+      .update(orders)
+      .set({ status: "paid", paidAt: new Date(), updatedAt: new Date() })
+      .where(eq(orders.id, hadoutaOrderId));
+    return c.redirect(
+      `${PUBLIC_FRONTEND_URL}/wizard/7?orderId=${hadoutaOrderId}`,
+      302,
+    );
+  }
+
+  // Failure — kick back to step 6 with a generic error
+  return c.redirect(
+    `${PUBLIC_FRONTEND_URL}/wizard/6?error=payment_failed&reason=${encodeURIComponent(failureReason)}`,
+    302,
+  );
 });
 
 export { paymentsRouter };

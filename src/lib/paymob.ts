@@ -22,6 +22,8 @@ export interface CreateIntentionInput {
   buyerEmail?: string | null;
   buyerPhone?: string | null;
   description: string; // human-readable line item
+  redirectionUrl?: string; // post-payment browser redirect (Transaction Response)
+  notificationUrl?: string; // server-to-server webhook (Transaction Processed)
 }
 
 export interface CreateIntentionResult {
@@ -48,7 +50,7 @@ export async function createIntention(
   const [firstName, ...rest] = buyerName.split(/\s+/);
   const lastName = rest.join(" ") || "—";
 
-  const body = {
+  const body: Record<string, unknown> = {
     amount: input.amountCents,
     currency: input.currency ?? "EGP",
     payment_methods: [Number(INTEGRATION_ID_CARD)],
@@ -77,6 +79,11 @@ export async function createIntention(
     },
     extras: { hadoutaOrderId: input.orderId },
   };
+
+  // Per-intention callback URLs (override dashboard defaults).
+  // Lets us point sandbox vs production at different return endpoints.
+  if (input.redirectionUrl) body.redirection_url = input.redirectionUrl;
+  if (input.notificationUrl) body.notification_url = input.notificationUrl;
 
   const res = await fetch(`${BASE_URL}/v1/intention/`, {
     method: "POST",
