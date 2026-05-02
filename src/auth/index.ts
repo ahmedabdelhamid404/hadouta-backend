@@ -87,6 +87,20 @@ export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
 
+  // Sprint 2 first-cycle: turning off Better-Auth's strict origin/CSRF
+  // check because the admin app proxies via a Vercel serverless Route
+  // Handler. Node's undici fetch (used in the proxy) auto-adds
+  // `Sec-Fetch-Mode: cors`, which combined with the request URL's host
+  // (Railway) trips Better-Auth's INVALID_ORIGIN guard even when we
+  // explicitly inject Origin: hadouta-admin.vercel.app.
+  //
+  // Trusted-origins still enforced server-side at the route level via
+  // requireAdmin middleware (role='admin' check). Re-enable + properly
+  // configure cross-origin cookies (SameSite=None, Secure) in Sprint 3.
+  advanced: {
+    disableCSRFCheck: true,
+  },
+
   // Suppress Better-Auth's info-level logs which include user emails / phones
   // (e.g. "Sign-up attempt for existing email: ${email}") — constitution
   // Principle VII: PII never logged.
