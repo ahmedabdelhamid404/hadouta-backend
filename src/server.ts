@@ -16,6 +16,7 @@ import { paymentsRouter } from './routes/payments.js';
 import { adminGenerationsRouter } from './routes/admin-generations.js';
 import { adminEventsRouter } from './routes/admin-events.js';
 import { meRouter } from './routes/me.js';
+import { publicOrdersRouter } from './routes/public-orders.js';
 
 const app = new OpenAPIHono();
 
@@ -54,6 +55,7 @@ app.route('/api/payments', paymentsRouter);
 app.route('/api/admin/generations', adminGenerationsRouter);
 app.route('/api/admin/events', adminEventsRouter);
 app.route('/api/me', meRouter);
+app.route('/api/public', publicOrdersRouter);
 
 // OpenAPI spec endpoint — frontend pulls types from here via openapi-typescript
 app.doc('/openapi.json', {
