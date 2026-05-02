@@ -10,6 +10,7 @@ import {
   boolean,
   text,
   integer,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -116,6 +117,25 @@ export const clothingStyleEnum = pgEnum("clothing_style", [
   "egyptian_traditional",
   "school_uniform",
   "custom",
+]);
+
+// ============================================================================
+// Sprint 2 AI pipeline enums (added 2026-05-02 per ADR-020)
+// ============================================================================
+
+export const generationStatusEnum = pgEnum("generation_status", [
+  "queued",
+  "generating_story",
+  "story_done",
+  "generating_illustrations",
+  "illustrations_done",
+  "awaiting_review",
+  "approved",
+  "rejected",
+  "assembling_pdf",
+  "delivering",
+  "delivered",
+  "failed",
 ]);
 
 // ============================================================================
@@ -290,9 +310,95 @@ export const photos = pgTable("photos", {
     .defaultNow(),
 });
 
+// AI settings — singleton row (id='singleton') with all cost-related knobs
+// admin-controllable from the hadouta-admin panel. Per ADR-020 + session 9
+// dev-mode tuning: defaults are cost-minimizing (Haiku not Sonnet, 8 pages
+// not 16, 1 retry not 3). Production switches via admin UI.
+export const aiSettings = pgTable("ai_settings", {
+  id: text("id").primaryKey().default("singleton"),
+  storyModel: text("story_model").notNull().default("claude-haiku-4-5"),
+  storyMaxTokens: integer("story_max_tokens").notNull().default(4000),
+  illustrationModel: text("illustration_model").notNull().default("nano-banana"),
+  illustrationCount: integer("illustration_count").notNull().default(8),
+  maxRetries: integer("max_retries").notNull().default(1),
+  allowIllustrationFallback: boolean("allow_illustration_fallback")
+    .notNull()
+    .default(true),
+  autoApproveThreshold: integer("auto_approve_threshold"), // null = always review (Sprint 3 reserves)
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedByUserId: text("updated_by_user_id").references(() => user.id, {
+    onDelete: "set null",
+  }),
+});
+
+// Generations — top-level workflow record per AI generation pass.
+// Multiple generations can exist per order (rejected → retry creates a new row).
+export const generations = pgTable("generations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orderId: uuid("order_id")
+    .notNull()
+    .references(() => orders.id, { onDelete: "cascade" }),
+  status: generationStatusEnum("status").notNull().default("queued"),
+  storyJson: jsonb("story_json"), // full Claude output: {title, dedication, pages: [...]}
+  coverUrl: text("cover_url"),
+  pdfUrl: text("pdf_url"),
+  // Cost-tracking — captured per generation so admin can see actual $ spent
+  storyTokensInput: integer("story_tokens_input"),
+  storyTokensOutput: integer("story_tokens_output"),
+  illustrationsCount: integer("illustrations_count"),
+  estimatedCostCents: integer("estimated_cost_cents"), // store as cents, e.g. 70 = $0.70
+  // Review fields
+  rejectionCategory: text("rejection_category"), // 'religious'/'cultural'/'age'/'pacing'/'language'/'format'/'visual'/'other' per ADR-013
+  rejectionReason: text("rejection_reason"),
+  retryCount: integer("retry_count").notNull().default(0),
+  errorLog: text("error_log"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewedByUserId: text("reviewed_by_user_id").references(() => user.id, {
+    onDelete: "set null",
+  }),
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Book pages — per-page story text + illustration URL + validator flags.
+// pageNumber 0 = cover, 1..N = body pages.
+export const bookPages = pgTable("book_pages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  generationId: uuid("generation_id")
+    .notNull()
+    .references(() => generations.id, { onDelete: "cascade" }),
+  pageNumber: integer("page_number").notNull(),
+  storyText: text("story_text").notNull(),
+  illustrationUrl: text("illustration_url"),
+  illustrationPrompt: text("illustration_prompt").notNull(),
+  illustrationProvider: varchar("illustration_provider", { length: 30 }), // 'nano-banana' | 'nano-banana-pro' | 'gpt-image-2'
+  illustrationGeneratedAt: timestamp("illustration_generated_at", {
+    withTimezone: true,
+  }),
+  validationFlags: jsonb("validation_flags"), // array of {validator, severity, message}
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // Type exports
 export type User = typeof user.$inferSelect;
 export type NewUser = typeof user.$inferInsert;
+export type AiSettings = typeof aiSettings.$inferSelect;
+export type NewAiSettings = typeof aiSettings.$inferInsert;
+export type Generation = typeof generations.$inferSelect;
+export type NewGeneration = typeof generations.$inferInsert;
+export type BookPage = typeof bookPages.$inferSelect;
+export type NewBookPage = typeof bookPages.$inferInsert;
 export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
 export type WaitlistSignup = typeof waitlistSignups.$inferSelect;

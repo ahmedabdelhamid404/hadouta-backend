@@ -29,6 +29,13 @@
       "when": 1777741800000,
       "tag": "0003_phase_5_wizard_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777755000000,
+      "tag": "0004_sprint_2_ai_pipeline",
+      "breakpoints": true
     }
   ]
 }
