@@ -15,6 +15,13 @@
       "when": 1777587877145,
       "tag": "0001_abnormal_calypso",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777650000000,
+      "tag": "0002_phone_otp_and_multi_style",
+      "breakpoints": true
     }
   ]
 }

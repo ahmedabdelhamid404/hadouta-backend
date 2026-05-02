@@ -12,9 +12,9 @@ import {
 
 // ============================================================================
 // Better-Auth tables
-// Standard Better-Auth schema for Drizzle/Postgres. We add custom fields
-// (phone, role) via Better-Auth's `additionalFields` config — they show up
-// here as columns on the `user` table.
+// Standard Better-Auth schema for Drizzle/Postgres + the phone-number plugin
+// (ADR-018). Plugin-managed fields: phoneNumber, phoneNumberVerified.
+// Custom fields (via additionalFields in src/auth/index.ts): role, lastVerifiedAt.
 // IDs are text (Better-Auth's default — generated via createId).
 // ============================================================================
 
@@ -33,8 +33,19 @@ export const user = pgTable("user", {
     .$defaultFn(() => new Date())
     .notNull(),
 
+  // Better-Auth phone-number plugin columns (ADR-018 phone-first OTP).
+  // Plugin convention: phoneNumber (E.164 format) + phoneNumberVerified.
+  phoneNumber: text("phone_number").unique(),
+  phoneNumberVerified: boolean("phone_number_verified")
+    .$defaultFn(() => false)
+    .notNull(),
+
+  // ADR-018 risk-based step-up — tracks the most recent successful OTP
+  // verification. Used to gate sensitive ops (refund, change phone, etc.)
+  // without re-prompting on every routine action.
+  lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),
+
   // Custom fields (configured via additionalFields in src/auth/index.ts)
-  phone: varchar("phone", { length: 32 }),
   role: varchar("role", { length: 20 }).notNull().default("customer"), // 'customer' | 'admin'
 });
 
@@ -106,7 +117,10 @@ export const waitlistSignups = pgTable("waitlist_signups", {
     .defaultNow(),
 });
 
-// Themes — sketch (full schema in Sprint 3)
+// Themes — sketch (full schema in Sprint 3).
+// supportedStyles per ADR-019: which illustration styles can render this theme.
+// At MVP only 'watercolor' is active; field exists so future themes can be
+// multi-style without schema migration.
 export const themes = pgTable("themes", {
   id: uuid("id").primaryKey().defaultRandom(),
   slug: varchar("slug", { length: 50 }).notNull().unique(),
@@ -116,6 +130,10 @@ export const themes = pgTable("themes", {
   ageRangeMin: varchar("age_range_min", { length: 10 }),
   ageRangeMax: varchar("age_range_max", { length: 10 }),
   status: varchar("status", { length: 20 }).notNull().default("draft"),
+  supportedStyles: text("supported_styles")
+    .array()
+    .notNull()
+    .default(["watercolor"]),
   launchedAt: timestamp("launched_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -123,6 +141,8 @@ export const themes = pgTable("themes", {
 });
 
 // Orders — sketch (full schema in Sprint 3). user_id references Better-Auth user.id (text).
+// style per ADR-019: the illustration style this order was rendered in.
+// CHECK constraint added in migration: style IN ('watercolor', 'pixar_3d', 'soft_anime', 'kawaii')
 export const orders = pgTable("orders", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
@@ -130,6 +150,7 @@ export const orders = pgTable("orders", {
     onDelete: "restrict",
   }),
   status: varchar("status", { length: 30 }).notNull().default("pending"),
+  style: text("style").notNull().default("watercolor"),
   priceEgp: varchar("price_egp", { length: 10 }),
   paymentProvider: varchar("payment_provider", { length: 30 }),
   paymentId: varchar("payment_id", { length: 200 }),

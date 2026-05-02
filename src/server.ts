@@ -1,4 +1,7 @@
 import 'dotenv/config';
+// Sentry instrumentation must load before any other module that might
+// throw — Sentry hooks into Node's async resource tracking at init time.
+import { Sentry } from './instrumentation.js';
 import { serve } from '@hono/node-server';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
@@ -51,9 +54,15 @@ app.doc('/openapi.json', {
 // 404 handler
 app.notFound((c) => c.json({ error: 'Not found' }, 404));
 
-// Error handler
+// Error handler — captures to Sentry (no-op when DSN unset) before responding.
 app.onError((err, c) => {
   console.error('[server] Unhandled error:', err);
+  Sentry.captureException(err, {
+    extra: {
+      method: c.req.method,
+      path: c.req.path,
+    },
+  });
   return c.json({ error: 'Internal server error' }, 500);
 });
 

@@ -1,20 +1,30 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { phoneNumber } from "better-auth/plugins";
 import { z } from "zod";
 import { db } from "../db/index.js";
 import { sendEmail } from "./email.js";
+import { sendWhatsAppOTP } from "./twilio.js";
 
 /**
- * Better-Auth instance for Hadouta.
+ * Better-Auth instance for Hadouta. ADR-018 phone-first WhatsApp OTP +
+ * email/password as backup; ADR-009 stack (Better-Auth + Neon + R2).
  *
- * Sprint 1 A5 scope: email/password + Google OAuth + Resend email verification.
+ * Auth tiers per ADR-018:
+ *   1. WhatsApp OTP (primary — Twilio + Meta)
+ *   2. SMS OTP fallback (Twilio, automatic when WhatsApp delivery fails)
+ *   3. Google OAuth (alternative; conditional on env)
+ *   4. Email/password + email-OTP (last-resort recovery)
+ *
+ * Lazy verification: no requireEmailVerification gate. Email is verified
+ * only when the user adds it as a backup method, not at signup.
  *
  * Sessions stored in the same Neon Postgres database via Drizzle adapter.
  * Tables (created by `pnpm db:generate` from `src/db/schema.ts`):
- *   - user (with custom phone + role columns via additionalFields)
+ *   - user (with phone_number, phone_number_verified, last_verified_at, role)
  *   - session
  *   - account
- *   - verification
+ *   - verification (Better-Auth-managed, used by phone-number plugin too)
  */
 
 // ----- Env validation (constitution Principle II — Zod at boundaries) -----
@@ -73,7 +83,7 @@ export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
 
-  // Suppress Better-Auth's info-level logs which include user emails
+  // Suppress Better-Auth's info-level logs which include user emails / phones
   // (e.g. "Sign-up attempt for existing email: ${email}") — constitution
   // Principle VII: PII never logged.
   logger: {
@@ -81,11 +91,14 @@ export const auth = betterAuth({
     disabled: false,
   },
 
+  // ADR-018: email/password remains enabled as tier-4 last-resort fallback,
+  // but the requireEmailVerification gate is OFF — email is no longer the
+  // primary identifier, so verifying-on-signup is unnecessary friction.
+  // Email verification still runs lazily when a user adds email as a
+  // backup method.
   emailAndPassword: {
     enabled: true,
-    // In production force email verification before sign-in. In dev keep it
-    // off so flows aren't blocked when Resend creds aren't wired locally.
-    requireEmailVerification: isProduction,
+    requireEmailVerification: false,
     minPasswordLength: 8,
     maxPasswordLength: 128,
     autoSignIn: true,
@@ -99,8 +112,11 @@ export const auth = betterAuth({
     },
   },
 
+  // Lazy email verification — link-based, sent only when explicitly requested
+  // (e.g. a user adds email as a backup method post-signup). NOT triggered
+  // automatically on signup per ADR-018.
   emailVerification: {
-    sendOnSignUp: true,
+    sendOnSignUp: false,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
       await sendEmail({
@@ -112,16 +128,22 @@ export const auth = betterAuth({
     },
   },
 
-  // Custom user fields beyond Better-Auth defaults — added as columns on
-  // the `user` table by the Drizzle adapter.
+  // Custom user fields beyond Better-Auth + plugin defaults — added as columns
+  // on the `user` table by the Drizzle adapter. The phone-number plugin
+  // manages phoneNumber + phoneNumberVerified columns; we own role and
+  // lastVerifiedAt.
   user: {
     additionalFields: {
-      phone: { type: "string", required: false, input: true },
       role: {
         type: "string",
         required: false,
         defaultValue: "customer",
         input: false, // role is set server-side, not by the user
+      },
+      lastVerifiedAt: {
+        type: "date",
+        required: false,
+        input: false,
       },
     },
   },
@@ -140,6 +162,31 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 30, // 30 days
     updateAge: 60 * 60 * 24, // refresh session activity once per day
   },
+
+  // ADR-018 phone-first WhatsApp OTP. The plugin adds /api/auth/phone-number/*
+  // endpoints (send-otp, verify-phone-number, sign-up). The sendOTP callback
+  // delegates to twilio.ts, which handles WhatsApp tier-1 + SMS tier-2 fallback.
+  // signUpOnVerification: when a phone-OTP verifies and no user exists for
+  // that phone, create one. Better-Auth requires email on user table — we
+  // generate a placeholder email from the phone number; the user can add a
+  // real email later as a backup method.
+  plugins: [
+    phoneNumber({
+      sendOTP: async ({ phoneNumber: to, code }) => {
+        await sendWhatsAppOTP({
+          phoneNumber: to,
+          message: `كود الدخول لحدوتة: ${code}\n\nالكود صالح لـ ١٠ دقايق. ما تشاركوش الكود مع حد.\n\nHadouta verification code: ${code}`,
+        });
+      },
+      otpLength: 6,
+      expiresIn: 600, // 10 minutes — matches WhatsApp template spec
+      signUpOnVerification: {
+        getTempEmail: (phone) =>
+          `${phone.replace(/[^0-9]/g, "")}@phone.hadouta.local`,
+        getTempName: (phone) => phone,
+      },
+    }),
+  ],
 });
 
 export type Auth = typeof auth;
