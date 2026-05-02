@@ -17,6 +17,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "db:seed:moral-values": "tsx src/scripts/seed-moral-values.ts",
+    "db:seed:themes": "tsx src/scripts/seed-themes.ts",
     "openapi:export": "tsx src/scripts/export-openapi.ts > openapi.json"
   },
   "dependencies": {

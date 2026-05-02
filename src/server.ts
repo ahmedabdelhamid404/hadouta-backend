@@ -9,6 +9,8 @@ import { logger } from 'hono/logger';
 import { auth } from './auth/index.js';
 import { healthRoute } from './routes/health.js';
 import { waitlistRoute } from './routes/waitlist.js';
+import { ordersRouter } from './routes/orders.js';
+import { catalogRouter } from './routes/catalog.js';
 
 const app = new OpenAPIHono();
 
@@ -29,6 +31,8 @@ app.on(['POST', 'GET'], '/api/auth/*', (c) => auth.handler(c.req.raw));
 // Routes
 app.route('/health', healthRoute);
 app.route('/waitlist', waitlistRoute);
+app.route('/api/orders', ordersRouter);
+app.route('/api/catalog', catalogRouter);
 
 // OpenAPI spec endpoint — frontend pulls types from here via openapi-typescript
 app.doc('/openapi.json', {
