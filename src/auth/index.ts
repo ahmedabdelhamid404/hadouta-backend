@@ -42,6 +42,10 @@ const AuthEnvSchema = z.object({
     .min(16, "BETTER_AUTH_SECRET must be at least 16 chars (use `openssl rand -base64 32`)"),
   BETTER_AUTH_URL: z.string().url().default("http://localhost:3001"),
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),
+  // Comma-separated list of additional trusted origins for Better-Auth
+  // (e.g. hadouta-admin.vercel.app + localhost ports for the admin app).
+  // FRONTEND_URL is automatically included.
+  TRUSTED_ORIGINS: optionalNonEmpty,
   GOOGLE_CLIENT_ID: optionalNonEmpty,
   GOOGLE_CLIENT_SECRET: optionalNonEmpty,
   RESEND_API_KEY: optionalNonEmpty,
@@ -162,7 +166,17 @@ export const auth = betterAuth({
       }
     : {}),
 
-  trustedOrigins: [env.FRONTEND_URL],
+  trustedOrigins: [
+    env.FRONTEND_URL,
+    // Always trust the canonical admin app + local-dev admin ports.
+    "https://hadouta-admin.vercel.app",
+    "http://localhost:3002",
+    "http://localhost:3000",
+    // Plus any extras from env (comma-separated).
+    ...(env.TRUSTED_ORIGINS
+      ? env.TRUSTED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
+      : []),
+  ],
 
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 days
