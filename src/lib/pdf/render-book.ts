@@ -74,13 +74,21 @@ export async function assembleBookPdf(
   const html = buildHtml({
     title: story.title,
     dedication: story.dedication,
-    parentDiscussionQuestion: story.parentDiscussionQuestion,
+    // Backward-compat: generations created before moralStatement existed
+    // fall back to a generic closing line so the end-page still renders.
+    moralStatement:
+      (story as StoryOutput & { moralStatement?: string }).moralStatement ??
+      "حدوتة من القلب لقلبك",
     coverUrl: generation.coverUrl ?? null,
-    pages: pages.map((p) => ({
-      pageNumber: p.pageNumber,
-      storyText: p.storyText,
-      illustrationUrl: p.illustrationUrl ?? "",
-    })),
+    pages: pages.map((p) => {
+      const meta = story.pages.find((sp) => sp.number === p.pageNumber);
+      return {
+        pageNumber: p.pageNumber,
+        storyText: p.storyText,
+        illustrationUrl: p.illustrationUrl ?? "",
+        moralMoment: meta?.moralMoment ?? false,
+      };
+    }),
   });
 
   // Launch headless Chromium. PUPPETEER_EXECUTABLE_PATH lets prod (Railway)
@@ -152,30 +160,44 @@ export async function assembleBookPdf(
   };
 }
 
-interface HtmlInput {
+export interface HtmlInput {
   title: string;
   dedication: string;
-  parentDiscussionQuestion: string;
+  /** Distilled single-sentence moral takeaway. Rendered on end-page above "النهاية". */
+  moralStatement: string;
   coverUrl: string | null;
-  pages: Array<{ pageNumber: number; storyText: string; illustrationUrl: string }>;
+  pages: Array<{
+    pageNumber: number;
+    storyText: string;
+    illustrationUrl: string;
+    /** True on the single page where the moral is most clearly demonstrated. Drives optional moral-moment label. */
+    moralMoment: boolean;
+  }>;
 }
 
-function buildHtml(input: HtmlInput): string {
-  const pageHtml = input.pages
-    .map(
-      (p) => `
-      <section class="page body-page">
-        <div class="illustration">
-          <img src="${escapeAttr(p.illustrationUrl)}" alt="" />
-        </div>
-        <div class="text">
-          <p>${escapeText(p.storyText)}</p>
-        </div>
-        <div class="page-number">${p.pageNumber}</div>
-      </section>
-    `,
+export function buildHtml(input: HtmlInput): string {
+  const coverHtml = renderCoverPage({
+    title: input.title,
+    dedication: input.dedication,
+    coverUrl: input.coverUrl,
+  });
+
+  const bodyHtml = input.pages
+    .map((p) =>
+      renderBodyPage({
+        pageNumber: p.pageNumber,
+        storyText: p.storyText,
+        illustrationUrl: p.illustrationUrl,
+        moralMoment: p.moralMoment,
+      }),
     )
     .join("\n");
+
+  const lastBodyPage = input.pages[input.pages.length - 1];
+  const endHtml = renderEndPage({
+    moralStatement: input.moralStatement,
+    backdropUrl: lastBodyPage?.illustrationUrl ?? input.coverUrl ?? "",
+  });
 
   return `<!doctype html>
 <html lang="ar" dir="rtl">
@@ -184,110 +206,59 @@ function buildHtml(input: HtmlInput): string {
 <title>${escapeText(input.title)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Lalezar&display=swap" rel="stylesheet" />
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Cairo', sans-serif; color: #2d2421; background: #fffaf3; }
-  .page {
-    page-break-after: always;
-    width: 148mm; height: 210mm;
-    padding: 12mm;
-    display: flex; flex-direction: column;
-    position: relative;
-    background: #fffaf3;
-  }
-  .page:last-child { page-break-after: auto; }
-  .cover {
-    background: linear-gradient(135deg, #f5e8d4 0%, #e8c9a0 100%);
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 18mm;
-  }
-  .cover .cover-image {
-    width: 100%; max-height: 110mm; object-fit: contain;
-    border-radius: 8px;
-    margin-bottom: 12mm;
-  }
-  .cover h1 {
-    font-family: 'Lalezar', 'Cairo', sans-serif;
-    font-size: 32pt;
-    font-weight: 800;
-    color: #c66a3d;
-    line-height: 1.2;
-    margin-bottom: 8mm;
-  }
-  .cover .dedication {
-    font-size: 12pt;
-    color: #5b4a3e;
-    font-style: italic;
-    line-height: 1.6;
-    max-width: 110mm;
-  }
-  .body-page .illustration {
-    width: 100%; height: 60%;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .body-page .illustration img {
-    width: 100%; height: 100%; object-fit: contain;
-    border-radius: 4px;
-  }
-  .body-page .text {
-    flex: 1;
-    display: flex; align-items: center; justify-content: center;
-    padding: 6mm 4mm 0 4mm;
-    text-align: center;
-  }
-  .body-page .text p {
-    font-size: 14pt;
-    line-height: 2;
-    color: #2d2421;
-  }
-  .page-number {
-    position: absolute;
-    bottom: 8mm; left: 50%; transform: translateX(-50%);
-    font-size: 10pt;
-    color: #b59478;
-    font-weight: 600;
-  }
-  .end-page {
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    background: #f9efde;
-    padding: 18mm;
-  }
-  .end-page h2 {
-    font-family: 'Lalezar', 'Cairo', sans-serif;
-    font-size: 22pt;
-    color: #c66a3d;
-    margin-bottom: 8mm;
-  }
-  .end-page p { font-size: 14pt; line-height: 1.8; color: #5b4a3e; }
-  .end-page .brand {
-    margin-top: 12mm;
-    font-size: 10pt; color: #b59478;
-    letter-spacing: 0.1em;
-  }
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=El+Messiri:wght@400;500;600;700&family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>${SHARED_CSS}</style>
 </head>
 <body>
-  <section class="page cover">
-    ${input.coverUrl ? `<img class="cover-image" src="${escapeAttr(input.coverUrl)}" alt="" />` : ""}
-    <h1>${escapeText(input.title)}</h1>
-    <div class="dedication">${escapeText(input.dedication)}</div>
-  </section>
-
-  ${pageHtml}
-
-  <section class="page end-page">
-    <h2>سؤال للحدوتة بعد القراية</h2>
-    <p>${escapeText(input.parentDiscussionQuestion)}</p>
-    <div class="brand">حدوتة · HADOUTA</div>
-  </section>
+${coverHtml}
+${bodyHtml}
+${endHtml}
 </body>
 </html>`;
 }
+
+// Stub helpers — implemented in subsequent commits (Tasks 5–7).
+function renderCoverPage(_args: {
+  title: string;
+  dedication: string;
+  coverUrl: string | null;
+}): string {
+  return "";
+}
+
+function renderBodyPage(_args: {
+  pageNumber: number;
+  storyText: string;
+  illustrationUrl: string;
+  moralMoment: boolean;
+}): string {
+  return "";
+}
+
+function renderEndPage(_args: { moralStatement: string; backdropUrl: string }): string {
+  return "";
+}
+
+const SHARED_CSS = `
+  /* Reset */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Page-level: A5 */
+  body { font-family: 'Cairo', 'Tajawal', sans-serif; color: #2d2421; }
+  .page {
+    page-break-after: always;
+    width: 148mm; height: 210mm;
+    position: relative;
+    overflow: hidden;
+    background:
+      /* paper grain */
+      repeating-linear-gradient(92deg, rgba(139,106,74,0.012) 0, rgba(139,106,74,0.012) 1px, transparent 1px, transparent 3px),
+      repeating-linear-gradient(2deg,  rgba(139,106,74,0.018) 0, rgba(139,106,74,0.018) 1px, transparent 1px, transparent 4px),
+      /* warm cream radial */
+      radial-gradient(ellipse at 50% 50%, #fffbf3 0%, #fbf4e6 90%);
+  }
+  .page:last-child { page-break-after: auto; }
+`;
 
 function escapeText(s: string): string {
   return s
