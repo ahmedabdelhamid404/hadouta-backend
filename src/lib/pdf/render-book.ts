@@ -217,13 +217,27 @@ ${endHtml}
 </html>`;
 }
 
-// Stub helpers — implemented in subsequent commits (Tasks 5–7).
-function renderCoverPage(_args: {
+function renderCoverPage(args: {
   title: string;
   dedication: string;
   coverUrl: string | null;
 }): string {
-  return "";
+  const imgTag = args.coverUrl
+    ? `<img src="${escapeAttr(args.coverUrl)}" alt="" />`
+    : "";
+  return `
+    <section class="page cover-page">
+      <div class="cover-illus">${imgTag}</div>
+      <div class="cover-caption">
+        <div class="ornament-row">
+          <span class="line"></span><span class="ornament">✦</span><span class="line"></span>
+        </div>
+        <h1 class="cover-title">${escapeText(args.title)}</h1>
+        <div class="cover-dedication">${escapeText(args.dedication)}</div>
+      </div>
+      <div class="brand-mark">حدوتة</div>
+    </section>
+  `;
 }
 
 function renderBodyPage(_args: {
@@ -258,6 +272,126 @@ const SHARED_CSS = `
       radial-gradient(ellipse at 50% 50%, #fffbf3 0%, #fbf4e6 90%);
   }
   .page:last-child { page-break-after: auto; }
+
+  /* === Cover page === */
+  .cover-page { padding: 0; }
+  .cover-illus {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 75%;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .cover-illus img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  /* Watercolor fade at bottom of cover image */
+  .cover-illus::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 32px;
+    background: linear-gradient(180deg,
+      transparent 0%,
+      rgba(255,251,243,0.50) 60%,
+      rgba(255,251,243,0.88) 92%,
+      #fffbf3 100%);
+    pointer-events: none;
+  }
+  /* Painterly vignette */
+  .cover-illus::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 65%, rgba(0,0,0,0.12) 100%);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Caption block — anchored to bottom of cream zone */
+  .cover-caption {
+    position: absolute;
+    top: 75%; left: 0; right: 0; bottom: 0;
+    z-index: 2;
+    padding: 0 12mm 12mm;
+    display: flex; flex-direction: column;
+    justify-content: flex-end; align-items: center;
+    text-align: center;
+  }
+  /* Watercolor washes inside cream zone */
+  .cover-caption::before {
+    content: "";
+    position: absolute;
+    top: -4px; left: -16mm;
+    width: 55%; height: 90%;
+    background:
+      radial-gradient(circle at 60% 50%, rgba(86,124,122,0.10) 0%, transparent 65%),
+      radial-gradient(circle at 50% 70%, rgba(232,201,160,0.30) 0%, transparent 70%);
+    filter: blur(2px);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .cover-caption::after {
+    content: "";
+    position: absolute;
+    top: -4px; right: -20mm;
+    width: 50%; height: 85%;
+    background:
+      radial-gradient(circle at 30% 40%, rgba(198,106,61,0.10) 0%, transparent 65%),
+      radial-gradient(circle at 50% 70%, rgba(232,201,160,0.20) 0%, transparent 70%);
+    filter: blur(2px);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Ornament row (line ✦ line) */
+  .ornament-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    color: rgba(198,106,61,0.55);
+    z-index: 2; position: relative;
+  }
+  .ornament-row .line {
+    width: 32px; height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(198,106,61,0.5) 50%, transparent 100%);
+  }
+  .ornament-row .ornament {
+    color: #c66a3d; font-size: 12px; line-height: 1;
+  }
+
+  .cover-title {
+    font-family: 'El Messiri', 'Cairo', serif;
+    font-size: 28pt;
+    font-weight: 700;
+    color: #c66a3d;
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+    z-index: 2; position: relative;
+  }
+  .cover-dedication {
+    font-family: 'Cairo', 'Tajawal', sans-serif;
+    font-size: 12pt;
+    color: #8b6a4a;
+    font-style: italic;
+    line-height: 1.6;
+    margin-top: 10px;
+    max-width: 110mm;
+    z-index: 2; position: relative;
+  }
+
+  /* Brand wordmark — bottom of cover/end pages */
+  .brand-mark {
+    position: absolute;
+    bottom: 4mm; left: 0; right: 0;
+    text-align: center;
+    color: rgba(181,148,120,0.7);
+    font-family: 'Cairo', sans-serif;
+    font-size: 9pt;
+    letter-spacing: 0.35em;
+    font-weight: 600;
+    z-index: 3;
+  }
 `;
 
 function escapeText(s: string): string {

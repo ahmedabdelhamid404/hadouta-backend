@@ -51,3 +51,31 @@ describe("buildHtml — fonts + paper", () => {
     expect(html).toMatch(/dir=["']rtl["']/);
   });
 });
+
+describe("buildHtml — cover", () => {
+  const html = buildHtml(VALID_INPUT);
+
+  it("includes the cover illustration img with the cover URL", () => {
+    expect(html).toContain('class="cover-illus"');
+    expect(html).toContain(VALID_INPUT.coverUrl);
+  });
+
+  it("renders the title in El Messiri terracotta", () => {
+    expect(html).toContain(VALID_INPUT.title);
+    expect(html).toMatch(/\.cover-title[^}]*color:\s*#c66a3d/i);
+    expect(html).toMatch(/\.cover-title[^}]*El Messiri/);
+  });
+
+  it("renders the dedication in italic", () => {
+    expect(html).toContain(VALID_INPUT.dedication);
+    expect(html).toMatch(/\.cover-dedication[^}]*font-style:\s*italic/);
+  });
+
+  it("includes the brand wordmark", () => {
+    expect(html).toContain("حدوتة");
+  });
+
+  it("uses 75% illustration height (poster register)", () => {
+    expect(html).toMatch(/\.cover-illus[^}]*height:\s*75%/);
+  });
+});
