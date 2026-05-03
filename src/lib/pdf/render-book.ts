@@ -291,8 +291,20 @@ function renderBodyPage(args: {
   `;
 }
 
-function renderEndPage(_args: { moralStatement: string; backdropUrl: string }): string {
-  return "";
+function renderEndPage(args: { moralStatement: string; backdropUrl: string }): string {
+  const imgTag = args.backdropUrl
+    ? `<img src="${escapeAttr(args.backdropUrl)}" alt="" />`
+    : "";
+  return `
+    <section class="page end-page">
+      <div class="end-illus">${imgTag}</div>
+      <div class="end-caption">
+        <div class="end-moral">${escapeText(args.moralStatement)}</div>
+        <div class="nihaya">النهاية</div>
+      </div>
+      <div class="brand-mark">حدوتة</div>
+    </section>
+  `;
 }
 
 const SHARED_CSS = `
@@ -552,6 +564,103 @@ const SHARED_CSS = `
     letter-spacing: 0.35em;
     font-weight: 600;
     z-index: 3;
+  }
+
+  /* === End page (mirrors cover) === */
+  .end-page { padding: 0; }
+  .end-illus {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 70%;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .end-illus img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .end-illus::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 32px;
+    background: linear-gradient(180deg,
+      transparent 0%,
+      rgba(255,251,243,0.50) 60%,
+      rgba(255,251,243,0.88) 92%,
+      #fffbf3 100%);
+    pointer-events: none;
+  }
+  .end-illus::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 65%, rgba(0,0,0,0.12) 100%);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .end-caption {
+    position: absolute;
+    top: 70%; left: 0; right: 0; bottom: 0;
+    z-index: 2;
+    padding: 6mm 11mm 12mm;
+    display: flex; flex-direction: column;
+    justify-content: flex-end; align-items: center;
+    text-align: center;
+  }
+  /* Same watercolor washes as cover */
+  .end-caption::before {
+    content: "";
+    position: absolute;
+    top: -4px; left: -16mm;
+    width: 55%; height: 95%;
+    background:
+      radial-gradient(circle at 60% 50%, rgba(86,124,122,0.10) 0%, transparent 65%),
+      radial-gradient(circle at 50% 70%, rgba(232,201,160,0.30) 0%, transparent 70%);
+    filter: blur(2px);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .end-caption::after {
+    content: "";
+    position: absolute;
+    top: -4px; right: -20mm;
+    width: 50%; height: 90%;
+    background:
+      radial-gradient(circle at 30% 40%, rgba(198,106,61,0.10) 0%, transparent 65%),
+      radial-gradient(circle at 50% 70%, rgba(232,201,160,0.20) 0%, transparent 70%);
+    filter: blur(2px);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Moral statement (Cairo, with hairline rule above) */
+  .end-moral {
+    font-family: 'Cairo', 'Tajawal', sans-serif;
+    font-size: 12pt;
+    line-height: 1.85;
+    color: #2d2421;
+    font-weight: 500;
+    margin-bottom: 6mm;
+    max-width: 110mm;
+    text-align: center;
+    z-index: 2; position: relative;
+  }
+  .end-moral::before {
+    content: "";
+    display: block;
+    width: 12mm;
+    height: 1px;
+    background: rgba(198,106,61,0.4);
+    margin: 0 auto 4mm;
+  }
+
+  /* "النهاية" stamp in Aref Ruqaa */
+  .nihaya {
+    font-family: 'Aref Ruqaa', 'El Messiri', 'Cairo', serif;
+    font-size: 30pt;
+    font-weight: 700;
+    color: #c66a3d;
+    line-height: 1.0;
+    padding: 1mm 0 0.5mm;
+    z-index: 2; position: relative;
   }
 `;
 

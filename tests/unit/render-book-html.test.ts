@@ -52,6 +52,35 @@ describe("buildHtml — fonts + paper", () => {
   });
 });
 
+describe("buildHtml — end page", () => {
+  const html = buildHtml(VALID_INPUT);
+
+  it("renders 'النهاية' in Aref Ruqaa", () => {
+    expect(html).toContain("النهاية");
+    expect(html).toMatch(/\.nihaya[^}]*Aref Ruqaa/);
+  });
+
+  it("renders the moralStatement on the end page", () => {
+    expect(html).toContain(VALID_INPUT.moralStatement);
+  });
+
+  it("uses the LAST body page's illustration as the end-page backdrop", () => {
+    const last = VALID_INPUT.pages[VALID_INPUT.pages.length - 1];
+    const occurrences = (
+      html.match(new RegExp(escapeRegex(last.illustrationUrl), "g")) || []
+    ).length;
+    expect(occurrences).toBeGreaterThanOrEqual(2);
+  });
+
+  it("does NOT render the parentDiscussionQuestion section header", () => {
+    expect(html).not.toContain("سؤال للحدوتة بعد القراية");
+  });
+});
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 describe("buildHtml — body pages", () => {
   const html = buildHtml(VALID_INPUT);
 
