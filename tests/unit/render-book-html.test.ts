@@ -52,6 +52,37 @@ describe("buildHtml — fonts + paper", () => {
   });
 });
 
+describe("buildHtml — body pages", () => {
+  const html = buildHtml(VALID_INPUT);
+
+  it("renders one section per body page", () => {
+    const matches = html.match(/<section[^>]*class="page body-page"/g);
+    expect(matches).toHaveLength(VALID_INPUT.pages.length);
+  });
+
+  it("renders each page's text and illustration URL", () => {
+    for (const p of VALID_INPUT.pages) {
+      expect(html).toContain(p.storyText);
+      expect(html).toContain(p.illustrationUrl);
+    }
+  });
+
+  it("renders Eastern Arabic page numbers", () => {
+    expect(html).toContain("٢");
+  });
+
+  it("renders moral-moment label only on moralMoment pages", () => {
+    const labelOccurrences = (html.match(/لحظة الحكاية/g) || []).length;
+    const moralPages = VALID_INPUT.pages.filter((p) => p.moralMoment);
+    expect(labelOccurrences).toBe(moralPages.length);
+  });
+
+  it("includes inner border + corner flourishes in body-page CSS", () => {
+    expect(html).toMatch(/\.body-page::before[^}]*border:/);
+    expect(html).toContain("corner-flourish");
+  });
+});
+
 describe("buildHtml — cover", () => {
   const html = buildHtml(VALID_INPUT);
 

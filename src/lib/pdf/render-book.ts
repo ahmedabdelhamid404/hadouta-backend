@@ -240,13 +240,55 @@ function renderCoverPage(args: {
   `;
 }
 
-function renderBodyPage(_args: {
+const EASTERN_DIGITS = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+
+function toEasternArabic(n: number): string {
+  return String(n)
+    .split("")
+    .map((d) => EASTERN_DIGITS[Number(d)] ?? d)
+    .join("");
+}
+
+function renderBodyPage(args: {
   pageNumber: number;
   storyText: string;
   illustrationUrl: string;
   moralMoment: boolean;
 }): string {
-  return "";
+  const moralLabel = args.moralMoment
+    ? `<div class="moral-label">★ لحظة الحكاية</div>`
+    : "";
+  return `
+    <section class="page body-page">
+      <span class="corner-flourish corner-tl">✦</span>
+      <span class="corner-flourish corner-tr">✦</span>
+      <span class="corner-flourish corner-bl">✦</span>
+      <span class="corner-flourish corner-br">✦</span>
+
+      <div class="body-illus">
+        <img src="${escapeAttr(args.illustrationUrl)}" alt="" />
+      </div>
+
+      <div class="body-divider">
+        <span class="line"></span><span class="ornament">✦</span><span class="line"></span>
+      </div>
+
+      ${moralLabel}
+
+      <div class="body-text-wrap">
+        <p class="body-text">${escapeText(args.storyText)}</p>
+      </div>
+
+      <div class="page-number">
+        <span class="ornament">✦</span>
+        <span class="label">صفحة</span>
+        <span class="num">${toEasternArabic(args.pageNumber)}</span>
+        <span class="ornament">✦</span>
+      </div>
+
+      <div class="brand-tick">حدوتة</div>
+    </section>
+  `;
 }
 
 function renderEndPage(_args: { moralStatement: string; backdropUrl: string }): string {
@@ -378,6 +420,125 @@ const SHARED_CSS = `
     margin-top: 10px;
     max-width: 110mm;
     z-index: 2; position: relative;
+  }
+
+  /* === Body page (framed island) === */
+  .body-page {
+    padding: 11mm 11mm 10mm;
+    display: flex; flex-direction: column;
+  }
+  /* Inner border at 6mm inset */
+  .body-page::before {
+    content: "";
+    position: absolute;
+    inset: 6mm;
+    border: 0.4pt solid rgba(198,106,61,0.18);
+    pointer-events: none;
+  }
+  /* Corner flourishes outside the inner border */
+  .corner-flourish {
+    position: absolute;
+    color: rgba(198,106,61,0.4);
+    font-size: 12pt;
+    line-height: 1;
+    z-index: 3;
+  }
+  .corner-tl { top: 4mm; right: 4mm; }
+  .corner-tr { top: 4mm; left: 4mm; }
+  .corner-bl { bottom: 20mm; right: 4mm; }
+  .corner-br { bottom: 20mm; left: 4mm; }
+
+  .body-illus {
+    width: 100%;
+    aspect-ratio: 4 / 3.4;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 1mm;
+    box-shadow: 0 2px 6px rgba(80,60,40,0.08), 0 6px 18px rgba(80,60,40,0.10);
+    z-index: 2;
+    position: relative;
+  }
+  .body-illus img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .body-illus::after {
+    content: "";
+    position: absolute; inset: 0;
+    box-shadow: inset 0 0 18px rgba(80,60,40,0.10);
+    pointer-events: none;
+  }
+
+  /* Ornamental divider between image and text */
+  .body-divider {
+    margin: 7mm auto 6mm;
+    display: flex; align-items: center; justify-content: center;
+    gap: 4mm; width: 60%;
+    color: rgba(198,106,61,0.55);
+    z-index: 2; position: relative;
+  }
+  .body-divider .line {
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(198,106,61,0.35) 50%, transparent 100%);
+  }
+  .body-divider .ornament { color: #c66a3d; font-size: 10pt; }
+
+  /* Moral-moment label (only on moralMoment pages) */
+  .moral-label {
+    text-align: center;
+    font-family: 'El Messiri', serif;
+    font-size: 8pt;
+    color: #c66a3d;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 4mm;
+    z-index: 2; position: relative;
+  }
+
+  /* Story text block */
+  .body-text-wrap {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 3mm;
+    z-index: 2; position: relative;
+  }
+  .body-text {
+    font-family: 'Cairo', 'Tajawal', sans-serif;
+    font-size: 13pt;
+    line-height: 2.0;
+    color: #2d2421;
+    margin: 0;
+    text-align: center;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+
+  /* Page number — symmetric ✦ صفحة ١٤ ✦ */
+  .page-number {
+    text-align: center;
+    margin-top: 5mm;
+    color: #c66a3d;
+    font-family: 'El Messiri', serif;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3mm;
+    z-index: 2; position: relative;
+  }
+  .page-number .ornament { color: rgba(198,106,61,0.45); font-size: 9pt; }
+  .page-number .label { font-size: 11pt; }
+  .page-number .num { font-size: 12pt; }
+
+  /* Brand tick on body pages — slightly muted vs cover/end brand-mark */
+  .body-page .brand-tick {
+    position: absolute;
+    bottom: 2.5mm; left: 0; right: 0;
+    text-align: center;
+    color: rgba(181,148,120,0.55);
+    font-family: 'Cairo', sans-serif;
+    font-size: 8pt;
+    letter-spacing: 0.25em;
+    font-weight: 600;
+    z-index: 3;
   }
 
   /* Brand wordmark — bottom of cover/end pages */
