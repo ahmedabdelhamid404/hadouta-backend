@@ -28,6 +28,8 @@ export const EID_GENEROSITY_6_8 = {
       "Egyptian girl ~7 years old in green Eid dress, holding a tray of homemade kahk with another girl in plain clothes beside her, both smiling proudly, Cairo apartment hallway with warm Eid morning light, watercolor warm tones with festive atmosphere",
     parentDiscussionQuestion:
       "لو حد جنبك مش بيحس بفرحة العيد زيك، إيه أحلى طريقة تشاركه فرحتك؟",
+    moralStatement:
+      "وفي الآخر، عرفت مريم إن الكرم الحقيقي مش إنك تدّي، الكرم إنك تشوف اللي قدامك بقلبك وتشاركه الفرحة من غير ما تحسسه إنه محتاج.",
     pages: [
       {
         number: 1,

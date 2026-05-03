@@ -27,6 +27,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
       "Egyptian girl ~4 years old, dark curly hair, in a Cairo park, standing with another small girl, both holding a small red sand bucket between them, watercolor warm sunset light, simple iconic friendship scene with cream and terracotta tones",
     parentDiscussionQuestion:
       "في حاجة بتحبيها أوي عندك؟ لو لقيتي صاحبة محتاجاها، هتعمل إيه؟",
+    moralStatement:
+      "وفي الآخر، عرفت ليلى إن أحلى حاجة تعطيها هي اللي بتغلى عليكي — وإن اللطف بيدفي القلب أكتر من أي لعبة.",
     pages: [
       {
         number: 1,

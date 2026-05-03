@@ -28,6 +28,8 @@ export const SCHOOL_COURAGE_5_7 = {
       "Egyptian boy ~6 years old in school uniform, walking confidently into a Cairo school hallway, his name written on the back of his hand, watercolor warm morning light, sense of bravery earned through small courage",
     parentDiscussionQuestion:
       "لو إنت اتهت في مكان ما، هتفكر إزاي عشان تلاقي طريقك؟",
+    moralStatement:
+      "وعرف يوسف إن الشجاعة مش غياب الخوف — الشجاعة إنك تخطّي خطوة لقدام حتى لو قلبك بيرتجف.",
     pages: [
       {
         number: 1,
