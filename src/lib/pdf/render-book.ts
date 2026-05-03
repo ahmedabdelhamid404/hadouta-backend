@@ -217,13 +217,37 @@ ${endHtml}
 </html>`;
 }
 
+/**
+ * Add Cloudinary transformations to keep embedded image bytes manageable.
+ * Original PNGs from Gemini are ~3-5MB each; with 17 pages this blows up
+ * the PDF past Cloudinary's 10MB raw-asset limit on the free tier.
+ * c_limit,w_900,f_auto,q_auto:eco: caps max-edge at 900px (A5 illustration
+ * card is ~5cm wide → ~590px at 300dpi, so 900px gives 1.5x oversampling
+ * for any zoom in PDF viewers), Cloudinary picks best format (JPEG),
+ * eco-quality compression. Target: ~250-450KB per image. With 18 images
+ * (1 cover + 17 body + reused last-body on end-page is just a URL re-ref,
+ * no extra bytes), total embedded image payload stays under 8MB.
+ *
+ * Non-Cloudinary URLs are passed through unchanged.
+ */
+function pdfImageUrl(url: string): string {
+  if (!url.includes("res.cloudinary.com") || !url.includes("/upload/")) {
+    return url;
+  }
+  if (url.includes("/upload/c_") || url.includes("/upload/f_") || url.includes("/upload/q_")) {
+    // Already has transformations — leave alone.
+    return url;
+  }
+  return url.replace("/upload/", "/upload/c_limit,w_750,f_jpg,q_70/");
+}
+
 function renderCoverPage(args: {
   title: string;
   dedication: string;
   coverUrl: string | null;
 }): string {
   const imgTag = args.coverUrl
-    ? `<img src="${escapeAttr(args.coverUrl)}" alt="" />`
+    ? `<img src="${escapeAttr(pdfImageUrl(args.coverUrl))}" alt="" />`
     : "";
   return `
     <section class="page cover-page">
@@ -266,7 +290,7 @@ function renderBodyPage(args: {
       <span class="corner-flourish corner-br">✦</span>
 
       <div class="body-illus">
-        <img src="${escapeAttr(args.illustrationUrl)}" alt="" />
+        <img src="${escapeAttr(pdfImageUrl(args.illustrationUrl))}" alt="" />
       </div>
 
       <div class="body-divider">
@@ -293,7 +317,7 @@ function renderBodyPage(args: {
 
 function renderEndPage(args: { moralStatement: string; backdropUrl: string }): string {
   const imgTag = args.backdropUrl
-    ? `<img src="${escapeAttr(args.backdropUrl)}" alt="" />`
+    ? `<img src="${escapeAttr(pdfImageUrl(args.backdropUrl))}" alt="" />`
     : "";
   return `
     <section class="page end-page">
