@@ -80,6 +80,13 @@ export const storyOutputSchema = z.object({
     .describe(
       "Arabic open-ended question for the parent to ask the child after reading. Egyptian dialect (parent voice). Connects the moral back to the child's life.",
     ),
+  moralStatement: z
+    .string()
+    .min(20, "moralStatement must be ≥20 chars")
+    .max(220, "moralStatement must be ≤220 chars")
+    .describe(
+      "Single distilled sentence stating the moral as a takeaway, in Storyteller voice. Names the moral concept explicitly. Used on the end-page above 'النهاية'. Do NOT phrase as a question. Examples: 'وفي الآخر، عرفت ليلى إن العطاء بيدفي القلب.', 'وعرف يوسف إن الشجاعة مش غياب الخوف، الشجاعة إنك تعمل اللي صح حتى لو خايف.'",
+    ),
   pages: z
     .array(storyPageSchema)
     .min(4)
