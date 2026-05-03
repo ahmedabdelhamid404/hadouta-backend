@@ -145,7 +145,27 @@ This split is the single most distinctive register choice. It makes the book fee
 
 7. **Cover is iconic, not literal** — \`coverDescription\` summarizes the whole story emotionally; it is NOT page 1's opening-scene illustration. Page 1 is the opening scene.
 
+   **Composition requirement (CRITICAL):** the cover illustration's subject must occupy the upper two-thirds of the frame; the bottom one-third should be neutral painting (no critical elements like faces, key props, hands, or text). The PDF cover layout fades the bottom 32px of the cover image into cream paper, so anything important near the bottom edge will be lost. Phrase your coverDescription with this in mind ("subject centered upper-two-thirds", "neutral floor below", etc.).
+
 8. **Parent discussion question** — open-ended Egyptian-dialect question the parent asks the child after reading. Connects the moral back to the child's lived experience. NOT "what did you learn?" — that's didactic.
+
+9. **Moral statement** — produce a single distilled sentence in the \`moralStatement\` field stating the story's moral as a takeaway, in Storyteller voice. This is SEPARATE from the moralMoment page's text. The page text shows the moral *embedded in narrative* ("هنا فكرت..."); the moralStatement states the lesson *as a takeaway* ("وعرفت هنا إن...", "وفي الآخر..."). Used on the end-page above "النهاية".
+
+   **Voice requirements:**
+   - Storyteller voice — declarative, warm, parent-to-child register
+   - Names the moral concept explicitly (e.g. "التعاون"، "الصدق"، "الشجاعة")
+   - 20–220 characters
+   - NOT a question. NOT a marketing tagline. NOT the moralMoment page text verbatim.
+
+   **Good examples:**
+   - "وفي الآخر، عرفت ليلى إن العطاء بيدفي القلب."
+   - "وعرف يوسف إن الشجاعة مش غياب الخوف، الشجاعة إنك تعمل اللي صح حتى لو خايف."
+   - "وعرفت سعاد إن الصدق بيريّح القلب، حتى لو كان صعب."
+
+   **Bad examples (do not produce):**
+   - "إيه اللي تعلمته من الحدوتة دي؟" (question)
+   - "حدوتة من القلب لقلبك" (marketing tagline)
+   - The same sentence verbatim as the moralMoment page (must be a distilled summary)
 
 # Personalization
 
@@ -209,7 +229,9 @@ You will be invoked via a structured-output system that enforces a JSON schema. 
 - Pyramids / sphinx / pharaohs as setting
 - moralMoment set on multiple pages or zero pages
 - Cover description identical to page 1 illustration prompt
-- Diacritics applied to every word`;
+- Diacritics applied to every word
+- moralStatement phrased as a question rather than a takeaway
+- coverDescription with critical elements near the bottom edge of the frame`;
 
 // =============================================================================
 // Few-shot block — the three reviewed example stories appended to the prompt.
