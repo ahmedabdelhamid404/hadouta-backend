@@ -1,8 +1,10 @@
 // Bible schema — locked character/setting/style/cultural anchors that all
-// 17 illustration prompts inherit from. Generated once per story by
-// gpt-4o-mini (with optional vision call when customer photo is uploaded).
+// 17 illustration prompts inherit from. Generated once per story by gpt-4o
+// (NEVER gpt-4o-mini — see ADR-025) with optional gpt-4o-vision call when
+// customer photo is uploaded.
 //
-// Per docs/design/specs/2026-05-03-illustration-pipeline-redesign-spec.md §5.1.
+// Per docs/design/specs/2026-05-03-illustration-pipeline-redesign-spec.md §5.1
+// and ADR-024 (Nano Banana Pro Edit architecture).
 
 import { z } from "zod";
 
@@ -11,7 +13,7 @@ const childAppearanceSchema = z.object({
     .string()
     .min(20, "hair must be ≥20 chars — needs detail to anchor identity across pages")
     .describe(
-      "Detailed locked description: type, length, color, style. e.g. 'dark curly hair pulled into two pigtails with red ribbons, shoulder length'",
+      "Detailed locked description: type, length, color, AND STYLING (this last part is critical for cross-page consistency). Include ponytail/pigtails/braid/bun, bow color and placement, ribbon, headband, bangs (yes/no/sweep direction). e.g. 'dark curly hair pulled into two pigtails with red ribbons, shoulder length, with straight-cut bangs covering forehead'. A weak entry like 'long brown hair' produces inconsistent renders across pages.",
     ),
   skin: z.string().min(10),
   eyes: z.string().min(10),
@@ -88,7 +90,7 @@ export const bibleSchema = z.object({
       .string()
       .min(20)
       .describe(
-        "What this is NOT. Powerful constraints — Flux honors negative prompts. e.g. 'NOT photorealistic, NOT 3D, NOT Disney-cartoon, NOT anime, NOT vector-flat'",
+        "What this is NOT. Powerful constraints — the illustration model honors negative prompts. e.g. 'NOT photorealistic, NOT 3D, NOT Disney-cartoon, NOT anime, NOT vector-flat'",
       ),
     compositionAnchors: z
       .string()

@@ -1,10 +1,11 @@
-// System prompt for the Bible generator. Instructs gpt-4o-mini to produce
-// the locked character/setting/style/cultural anchors that all 17 illustration
-// prompts will inherit from. Generated AFTER the story is written so the
-// Bible can reference story-specific details (e.g. moral concept, special
-// occasion, location).
+// System prompt for the Bible generator. Instructs gpt-4o (NEVER gpt-4o-mini —
+// see ADR-025 + feedback memory) to produce the locked character/setting/style/
+// cultural anchors that all 17 illustration prompts will inherit from.
+// Generated AFTER the story is written so the Bible can reference story-specific
+// details (e.g. moral concept, special occasion, location).
 //
-// Per docs/design/specs/2026-05-03-illustration-pipeline-redesign-spec.md §5.1.
+// Per docs/design/specs/2026-05-03-illustration-pipeline-redesign-spec.md §5.1
+// and ADR-024 (Nano Banana Pro Edit architecture).
 
 import type { Persona } from "../personas.js";
 import type { GlossaryEntry } from "../cultural-glossary.js";
@@ -31,7 +32,9 @@ The customer uploaded a photo of their child. A vision model has described what 
 
 Lock the appearance fields to match this description. The customer expects the Bible to reflect THEIR child, not a generic persona.
 
-**CRITICAL — outfit handling:** If the vision description mentions any traditional / cultural clothing (galabeya, thobe, hijab, abaya, kaftan, traditional Eid dress, school uniform, etc.), put that EXACT clothing as outfit.default. Do NOT default to "t-shirt and shorts" if the photo shows the child in cultural attire — that contradicts the customer's expectation that the book reflects how they actually dressed for the photo. The illustrator locks outfit across all 17 pages, so getting this right matters.`
+**CRITICAL — outfit handling:** If the vision description mentions any traditional / cultural clothing (galabeya, thobe, hijab, abaya, kaftan, traditional Eid dress, school uniform, etc.), put that EXACT clothing as outfit.default. Do NOT default to "t-shirt and shorts" if the photo shows the child in cultural attire — that contradicts the customer's expectation that the book reflects how they actually dressed for the photo. The illustrator locks outfit across all 17 pages, so getting this right matters.
+
+**CRITICAL — hair styling capture:** Read the photo description carefully for hair STYLING (not just color/length). If the description names a ponytail, pigtails, braid, bun, bow, ribbon, headband, or hairband — INCLUDE THESE in \`appearance.hair\` verbatim. The customer expects every page to render the child with the SAME hair styling they uploaded. If the photo shows "ponytail tied with green bow," every page should render that exact ponytail with that exact green bow.`
     : args.persona
       ? `## Visual seed — selected persona
 
@@ -68,7 +71,28 @@ NO persona chosen, NO photo uploaded, and NO description provided. Invent a cohe
           )
           .join("\n");
 
-  return `You are an art-direction Bible generator for an Egyptian personalized children's-book platform. Your job is to produce a STRUCTURED, LOCKED description of a single book's character + setting + style + cultural anchors. The illustration model (Flux 1.1 Pro via Fal.ai) will receive this Bible PLUS a per-page scene addendum on every one of 17 illustration calls — so anything you put in the Bible is rendered IDENTICALLY on every page. Be specific, be visual, be detailed.
+  return `You are an art-direction Bible generator for an Egyptian personalized children's-book platform. Your job is to produce a STRUCTURED, LOCKED description of a single book's character + setting + style + cultural anchors. The illustration model (Nano Banana Pro Edit / Gemini 2.5 Flash Image via Fal.ai) will receive this Bible PLUS a per-page scene addendum on every one of 17 illustration calls — so anything you put in the Bible is rendered IDENTICALLY on every page. Be specific, be visual, be detailed.
+
+## CHARACTER CONTINUITY IS THE PRIMARY GOAL
+
+The reader must feel they are seeing the SAME child on every page — same face, same hair STYLING (not just hair color/length but how it is styled: pigtails vs loose vs ponytail vs braid; ribbon/bow color and placement; bangs/no-bangs), and same outfit unless the story explicitly changes it.
+
+Lock the hair styling in \`appearance.hair\` with FULL specificity. Examples of locked hair entries (these all describe styling, not just color):
+- "shoulder-length dark brown hair pulled into a single high ponytail tied with a bright green bow on top"
+- "two black pigtails fastened with red ribbons, with straight-cut bangs covering forehead"
+- "loose curly black hair to mid-back, no accessories, side-parted with bangs swept right"
+
+A weak hair entry like "long brown hair" produces inconsistent renders across pages. A locked entry like "shoulder-length dark brown ponytail tied with green bow on top" stays identical.
+
+Lock the outfit in \`outfit.default\` similarly: name colors, items, accessories explicitly. The default outfit is what the child wears on every page UNLESS \`outfit.variations\` overrides for specific pages.
+
+## When to use outfit.variations[]
+
+Use \`outfit.variations\` ONLY when the STORY EXPLICITLY requires the outfit to change on a specific page (the user message — the actual story you'll receive — names the change). Examples:
+- Story page 14 says "she changed into pajamas before bed" → variation { pageNumbers: [14], description: "soft pink pajamas with star pattern" }
+- Story page 6 says "he put on his school uniform" → variation { pageNumbers: [6, 7, 8, 9], description: "navy blue school uniform with white collar" }
+
+DO NOT invent outfit changes the story didn't ask for. If the story is "birthday party at home", the child wears the SAME birthday outfit on all 17 pages — empty variations array. Outfit drift between pages is one of the top failures the customer notices.
 
 ## The story already exists
 
@@ -89,7 +113,7 @@ The brand is committed to a single visual register: soft watercolor with visible
 - Palette: "warm cream backgrounds, terracotta accents, soft sage greens, golden afternoon light"
 - NegativeStyle: "NOT photorealistic, NOT 3D-rendered, NOT Disney-cartoon, NOT anime, NOT vector-flat, NOT sharp digital lines"
 
-The negativeStyle is CRITICAL because Flux honors negative prompts strongly. Be explicit about what this is NOT.
+The negativeStyle is CRITICAL because the illustration model honors negative prompts strongly. Be explicit about what this is NOT.
 
 ## Setting — Cairo middle-class apartment by default
 
@@ -99,7 +123,7 @@ Unless the story dictates otherwise (e.g. school, park, mosque), the primary loc
 
 ${glossaryReference}
 
-For each entry above, decide whether it appears in the story (read the user message) and add it to culturalNotes if so. Be VERY explicit ("During Eid el-Fitr — kahk biscuits on table, NOT chocolate chip cookies"). Flux will see this exact text in every illustration prompt.
+For each entry above, decide whether it appears in the story (read the user message) and add it to culturalNotes if so. Be VERY explicit ("During Eid el-Fitr — kahk biscuits on table, NOT chocolate chip cookies"). The illustration model will see this exact text in every illustration prompt.
 
 ## Output
 
