@@ -19,8 +19,11 @@ import {
   supportingCharacters,
   generations,
   bookPages,
+  photos,
 } from "../db/schema.js";
 import { generateStory } from "../lib/ai/story-generator.js";
+import { generateBible } from "../lib/ai/bible-generator.js";
+import { buildIllustrationPrompt } from "../lib/ai/prompts/build-illustration-prompt.js";
 import { generateAllIllustrations } from "../lib/ai/illustration-generator.js";
 import { adminEvents } from "../lib/admin-events.js";
 
@@ -148,27 +151,67 @@ async function runGenerationPipeline(
       });
     }
 
+    // Step 2: Bible generation. Locked character/setting/style/cultural
+    // anchors that all 17 illustration prompts inherit from. Reads the
+    // customer's uploaded photo (if any) for the vision-described path,
+    // or falls back to childSpecialTraits as a free-form description seed.
+    const customerPhotoUrl = await loadMainChildPhotoUrl(orderId);
+    const bible = await generateBible({
+      story: storyResult.story,
+      wizardData: {
+        childName: ctx.order.childName ?? "Child",
+        childAgeBand: ctx.order.childAgeBand as "3-5" | "5-7" | "6-8",
+        childAgeExact: ctx.order.childAgeExact ?? 4,
+        childGender: ctx.order.childGender as "boy" | "girl",
+        theme: ctx.theme.titleAr,
+        moralValue: ctx.moralValue.nameAr,
+        photoUrl: customerPhotoUrl,
+        // Persona-id column doesn't exist yet (Phase G adds main_child_persona_id).
+        // For now, fall back to childSpecialTraits as a free-form description seed
+        // when no photo is provided. If neither exists, the Bible generator
+        // throws — caught + persisted by the outer try/catch.
+        personaId: null,
+        childDescription: ctx.order.childSpecialTraits ?? null,
+      },
+    });
+    console.log(
+      `[jobs/generate-book] bible done, generation=${generationId}`,
+    );
+
     await db
       .update(generations)
-      .set({ status: "generating_illustrations", updatedAt: new Date() })
+      .set({
+        bibleJson: bible,
+        bibleRegeneratedAt: new Date(),
+        status: "generating_illustrations",
+        updatedAt: new Date(),
+      })
       .where(eq(generations.id, generationId));
 
-    // TEMPORARY orchestrator wiring for Tasks 9–10. Task 11 rewrites this
-    // to call the Bible generator + buildIllustrationPrompt assembler.
-    // For now we send the raw scene text as the positive prompt and a
-    // placeholder negative — Task 11 supplies real Bible-driven prompts.
+    // Step 3: Build per-page illustration prompts from Bible + scene addendum.
+    const coverPrompts = buildIllustrationPrompt({
+      bible,
+      scene: storyResult.story.coverDescription,
+      pageNumber: 0,
+    });
+    const pagePrompts = storyResult.story.pages.map((p) => ({
+      pageNumber: p.number,
+      ...buildIllustrationPrompt({ bible, scene: p.scene, pageNumber: p.number }),
+    }));
+
+    // Step 4: Generate cover + body illustrations via Fal.ai (Flux + optional PuLID).
     const illustrations = await generateAllIllustrations({
       orderId,
       cover: {
-        positivePrompt: storyResult.story.coverDescription,
-        negativePrompt: "NOT photorealistic, NOT 3D, NOT cartoon, NOT anime",
+        positivePrompt: coverPrompts.positive,
+        negativePrompt: coverPrompts.negative,
       },
-      pages: storyResult.story.pages.map((p) => ({
-        pageNumber: p.number,
-        positivePrompt: p.scene,
-        negativePrompt: "NOT photorealistic, NOT 3D, NOT cartoon, NOT anime",
+      pages: pagePrompts.map((p) => ({
+        pageNumber: p.pageNumber,
+        positivePrompt: p.positive,
+        negativePrompt: p.negative,
       })),
-      customerPhotoUrl: null,
+      customerPhotoUrl,
     });
     console.log(
       `[jobs/generate-book] illustrations done: ${illustrations.pages.length + 1} images, ${illustrations.totalDurationMs}ms`,
@@ -243,6 +286,19 @@ async function runGenerationPipeline(
       status: "failed",
     });
   }
+}
+
+/**
+ * Looks up the customer-uploaded main-child photo URL on Cloudinary, if any.
+ * Returns null when no photo was uploaded (the no-photo wizard path).
+ */
+async function loadMainChildPhotoUrl(orderId: string): Promise<string | null> {
+  const rows = await db
+    .select({ url: photos.url })
+    .from(photos)
+    .where(and(eq(photos.orderId, orderId), eq(photos.ownerType, "main_child")))
+    .limit(1);
+  return rows[0]?.url ?? null;
 }
 
 async function loadOrderContext(orderId: string) {
