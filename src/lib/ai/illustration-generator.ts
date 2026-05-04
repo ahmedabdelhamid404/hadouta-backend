@@ -13,9 +13,55 @@
 import { fal } from "@fal-ai/client";
 import { uploadImage } from "../cloudinary.js";
 
-const FLUX_PRO_ENDPOINT = "fal-ai/flux-pro/v1.1";
-const FLUX_REDUX_ENDPOINT = "fal-ai/flux-pro/v1.1/redux";
-const FLUX_PULID_ENDPOINT = "fal-ai/flux-pulid";
+// Pivot to Nano Banana (Gemini 2.5 Flash Image) per Phase H iteration 3 (2026-05-05):
+// 3 iterations of Flux+PuLID tuning showed PuLID's portrait-only ceiling can't
+// render character-in-scene illustrations. Nano Banana renders rich Egyptian
+// scenes well (Sprint 2 confirmed) and Pro-Edit accepts multiple reference
+// images for character continuity.
+//
+// Architecture:
+//   Cover       → fal-ai/nano-banana-pro/edit, image_urls = [photoUrl]
+//                 Or non-edit if no photo. Photo provides identity.
+//   Body pages  → fal-ai/nano-banana-pro/edit, image_urls = [coverUrl, photoUrl?]
+//                 Cover provides character/style/scene continuity. Photo (if any)
+//                 reinforces face identity. Gemini's multimodal vision merges both.
+const NANO_BANANA_PRO_EDIT = "fal-ai/nano-banana-pro/edit";
+const NANO_BANANA_PRO = "fal-ai/nano-banana-pro";
+// Legacy Flux endpoints — kept for reference; no longer called.
+// const FLUX_PRO_ENDPOINT = "fal-ai/flux-pro/v1.1";
+// const FLUX_REDUX_ENDPOINT = "fal-ai/flux-pro/v1.1/redux";
+// const FLUX_PULID_ENDPOINT = "fal-ai/flux-pulid";
+
+/**
+ * Apply Cloudinary face-detection crop transformation to a customer photo URL
+ * before passing to PuLID. PuLID's InsightFace face encoder needs the face to
+ * occupy ≥30% of the frame for a strong identity vector; full-body wizard
+ * uploads typically have face at ~10% of frame, producing weak vectors.
+ *
+ * Cloudinary's c_thumb,g_face crops to a face-centered square. If the URL is
+ * not a Cloudinary URL or already has transformations, returns it unchanged.
+ *
+ * Per Phase H verification 2026-05-04 — full-body photos produced illustrations
+ * where the boy's face only weakly matched the photo. Face-crop addresses this
+ * without touching the original photo (which is still used as-is by the Bible
+ * vision call to capture clothing context).
+ */
+function pulidFaceCropUrl(url: string): string {
+  if (!url.includes("res.cloudinary.com") || !url.includes("/upload/")) {
+    return url;
+  }
+  if (
+    url.includes("/upload/c_") ||
+    url.includes("/upload/g_") ||
+    url.includes("/upload/w_")
+  ) {
+    return url; // already has transformations — don't double-apply
+  }
+  return url.replace(
+    "/upload/",
+    "/upload/c_thumb,g_face,w_512,h_512,z_0.7,f_jpg/",
+  );
+}
 
 let _falConfigured = false;
 function ensureFalConfigured(): void {
@@ -32,6 +78,8 @@ export interface CoverInput {
   orderId: string;
   positivePrompt: string;
   negativePrompt: string;
+  /** Optional — when set, used as reference image so cover reflects the actual child. */
+  customerPhotoUrl?: string | null;
 }
 
 export interface IllustrationResult {
@@ -48,36 +96,48 @@ export async function generateCoverIllustration(
   ensureFalConfigured();
   const startedAt = Date.now();
 
-  // Flux 1.1 Pro (cover endpoint) is text-only — no native negative_prompt
-  // field. Embed negatives into the positive prompt as natural-language
-  // constraints, which Flux models honor reasonably well. (Body pages use
-  // Redux / PuLID endpoints that DO accept native negative_prompt.)
+  // Nano Banana doesn't accept a separate negative_prompt — fold it into the
+  // positive prompt as natural-language constraints. Gemini's instruction-
+  // following is strong enough to honor "avoid X" phrasing.
   const promptWithNegatives = input.negativePrompt
     ? `${input.positivePrompt}. Avoid: ${input.negativePrompt}.`
     : input.positivePrompt;
 
-  const result = await fal.subscribe(FLUX_PRO_ENDPOINT, {
-    input: {
-      prompt: promptWithNegatives,
-      image_size: "portrait_4_3",
-      output_format: "png",
-      safety_tolerance: "2",
-    },
-    logs: false,
-  });
+  // If a customer photo was provided, use the edit endpoint with the photo
+  // as reference (preserves identity). Otherwise text-to-image.
+  let result;
+  if (input.customerPhotoUrl) {
+    result = await fal.subscribe(NANO_BANANA_PRO_EDIT, {
+      input: {
+        prompt: promptWithNegatives,
+        image_urls: [input.customerPhotoUrl],
+        aspect_ratio: "3:4",
+        output_format: "png",
+        num_images: 1,
+      },
+      logs: false,
+    });
+  } else {
+    result = await fal.subscribe(NANO_BANANA_PRO, {
+      input: {
+        prompt: promptWithNegatives,
+        aspect_ratio: "3:4",
+        output_format: "png",
+        num_images: 1,
+      },
+      logs: false,
+    });
+  }
 
   const durationMs = Date.now() - startedAt;
   const image = (result as { data?: { images?: Array<{ url?: string; content_type?: string }> } })
     .data?.images?.[0];
   if (!image?.url) {
     throw new Error(
-      `Flux returned no image for cover. Response: ${JSON.stringify(result.data ?? null).slice(0, 500)}`,
+      `Nano Banana returned no image for cover. Response: ${JSON.stringify(result.data ?? null).slice(0, 500)}`,
     );
   }
 
-  // Download Fal.ai's CDN URL and re-upload to Cloudinary so we own the
-  // hosting (and so admin UI image lookups continue to work via the existing
-  // hadouta/orders/<orderId>/illustration_<owner> folder convention).
   const buffer = await downloadAsBuffer(image.url);
   const uploaded = await uploadImage(
     buffer,
@@ -90,7 +150,7 @@ export async function generateCoverIllustration(
     url: uploaded.url,
     contentType: uploaded.contentType,
     fileSize: uploaded.fileSize,
-    modelId: "flux-pro-1.1",
+    modelId: input.customerPhotoUrl ? "nano-banana-pro-edit" : "nano-banana-pro",
     durationMs,
   };
 }
@@ -128,51 +188,36 @@ export async function generateBodyIllustration(
   ensureFalConfigured();
   const startedAt = Date.now();
 
-  const usePuLID = !!input.customerPhotoUrl;
+  // Phase H iteration 4 (2026-05-05): passing [coverUrl, photoUrl] caused Nano
+  // Banana to anchor on the cover image and produce near-duplicates across
+  // pages. Fix: prefer ONLY the photo as reference when available — child
+  // identity preserved, scene varies freely per prompt. When no photo, fall
+  // back to cover (so character at least matches; better than no reference).
+  const imageUrls: string[] = input.customerPhotoUrl
+    ? [input.customerPhotoUrl]
+    : [input.coverImageUrl];
 
-  let result;
-  if (usePuLID) {
-    result = await fal.subscribe(FLUX_PULID_ENDPOINT, {
-      input: {
-        prompt: input.positivePrompt,
-        negative_prompt: input.negativePrompt,
-        reference_image_url: input.customerPhotoUrl!,
-        image_size: "portrait_4_3",
-        num_inference_steps: 28,
-        guidance_scale: 4,
-        // Per research: 0.7-0.8 is the identity-strength sweet spot.
-        // Default is 1.0 — too strong, faces dominate scene composition.
-        id_weight: 0.75,
-        // Mid-window injection: let Flux build composition first (steps 0–start),
-        // then inject identity, then polish style (steps end–total).
-        start_step: 0,
-        enable_safety_checker: true,
-      },
-      logs: false,
-    });
-  } else {
-    result = await fal.subscribe(FLUX_REDUX_ENDPOINT, {
-      input: {
-        // Note: Redux endpoint uses prompt + image_url for image-to-image
-        // conditioning. The cover-derived character + style transfers via
-        // image_url; the per-page scene comes via prompt.
-        prompt: `${input.positivePrompt}. Avoid: ${input.negativePrompt}.`,
-        image_url: input.coverImageUrl,
-        image_size: "portrait_4_3",
-        num_inference_steps: 28,
-        guidance_scale: 3.5,
-        output_format: "png",
-      },
-      logs: false,
-    });
-  }
+  const promptWithNegatives = input.negativePrompt
+    ? `${input.positivePrompt}. Avoid: ${input.negativePrompt}.`
+    : input.positivePrompt;
+
+  const result = await fal.subscribe(NANO_BANANA_PRO_EDIT, {
+    input: {
+      prompt: promptWithNegatives,
+      image_urls: imageUrls,
+      aspect_ratio: "3:4",
+      output_format: "png",
+      num_images: 1,
+    },
+    logs: false,
+  });
 
   const durationMs = Date.now() - startedAt;
   const image = (result as { data?: { images?: Array<{ url?: string; content_type?: string }> } })
     .data?.images?.[0];
   if (!image?.url) {
     throw new Error(
-      `Flux returned no image for page ${input.pageNumber}. Response: ${JSON.stringify(result.data ?? null).slice(0, 500)}`,
+      `Nano Banana returned no image for page ${input.pageNumber}. Response: ${JSON.stringify(result.data ?? null).slice(0, 500)}`,
     );
   }
 
@@ -188,7 +233,7 @@ export async function generateBodyIllustration(
     url: uploaded.url,
     contentType: uploaded.contentType,
     fileSize: uploaded.fileSize,
-    modelId: usePuLID ? "flux-pulid" : "flux-pro-1.1",
+    modelId: "nano-banana-pro-edit",
     durationMs,
   };
 }
@@ -227,6 +272,7 @@ export async function generateAllIllustrations(
     orderId: input.orderId,
     positivePrompt: input.cover.positivePrompt,
     negativePrompt: input.cover.negativePrompt,
+    customerPhotoUrl: input.customerPhotoUrl,
   });
 
   const pages = await runWithConcurrency(input.pages, ILLUSTRATION_CONCURRENCY, async (page) => {

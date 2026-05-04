@@ -29,7 +29,9 @@ The customer uploaded a photo of their child. A vision model has described what 
 
 > ${args.photoDescription}
 
-Lock the appearance fields to match this description. The customer expects the Bible to reflect THEIR child, not a generic persona.`
+Lock the appearance fields to match this description. The customer expects the Bible to reflect THEIR child, not a generic persona.
+
+**CRITICAL — outfit handling:** If the vision description mentions any traditional / cultural clothing (galabeya, thobe, hijab, abaya, kaftan, traditional Eid dress, school uniform, etc.), put that EXACT clothing as outfit.default. Do NOT default to "t-shirt and shorts" if the photo shows the child in cultural attire — that contradicts the customer's expectation that the book reflects how they actually dressed for the photo. The illustrator locks outfit across all 17 pages, so getting this right matters.`
     : args.persona
       ? `## Visual seed — selected persona
 

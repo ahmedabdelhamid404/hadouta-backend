@@ -42,3 +42,5 @@ coverage/
 # OS / temp
 *.tmp
 *~
+# Phase H test harnesses (one-off scripts, do not commit)
+_e2e_*.mjs

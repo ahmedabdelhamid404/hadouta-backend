@@ -54,12 +54,11 @@ describe("generateCoverIllustration", () => {
       negativePrompt: "NOT photorealistic NOT 3D",
     });
 
+    // Cover with no customer photo → text-to-image endpoint (no edit).
     expect(fal.subscribe).toHaveBeenCalledWith(
-      "fal-ai/flux-pro/v1.1",
+      "fal-ai/nano-banana-pro",
       expect.objectContaining({
         input: expect.objectContaining({
-          // Flux 1.1 Pro doesn't accept negative_prompt — negatives are
-          // embedded into the positive prompt as natural-language constraints.
           prompt: expect.stringContaining("watercolor scene of an Egyptian girl in Cairo"),
         }),
       }),
@@ -68,7 +67,7 @@ describe("generateCoverIllustration", () => {
     const lastCall = (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(lastCall[1].input.prompt).toContain("NOT photorealistic");
     expect(result.url).toContain("res.cloudinary.com");
-    expect(result.modelId).toBe("flux-pro-1.1");
+    expect(result.modelId).toBe("nano-banana-pro");
   });
 
   it("throws if no image returned", async () => {
@@ -87,7 +86,7 @@ describe("generateCoverIllustration", () => {
 });
 
 describe("generateBodyIllustration", () => {
-  it("uses Redux endpoint with cover as reference when no photoUrl", async () => {
+  it("uses Nano Banana edit with cover as only reference when no photoUrl", async () => {
     (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { images: [{ url: "https://fal.ai/page1.png", content_type: "image/png" }] },
     });
@@ -102,15 +101,18 @@ describe("generateBodyIllustration", () => {
     });
 
     const lastCall = (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1)!;
-    expect(lastCall[0]).toBe("fal-ai/flux-pro/v1.1/redux");
+    expect(lastCall[0]).toBe("fal-ai/nano-banana-pro/edit");
     expect(lastCall[1].input).toMatchObject({
       prompt: expect.stringContaining("scene 1"),
-      image_url: "https://example.com/cover.png",
+      image_urls: ["https://example.com/cover.png"],
     });
     expect(lastCall[1].input.prompt).toContain("no flat");
   });
 
-  it("uses PuLID endpoint with photo as reference when photoUrl provided", async () => {
+  it("uses Nano Banana edit with photo only (NOT cover) when photoUrl provided", async () => {
+    // Per iteration 5 fix: when a customer photo is available, body pages use
+    // ONLY the photo as reference. Cover is dropped to prevent the cover-clone
+    // duplication observed in iteration 4.
     (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { images: [{ url: "https://fal.ai/page2.png", content_type: "image/png" }] },
     });
@@ -125,12 +127,11 @@ describe("generateBodyIllustration", () => {
     });
 
     const lastCall = (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1)!;
-    expect(lastCall[0]).toBe("fal-ai/flux-pulid");
+    expect(lastCall[0]).toBe("fal-ai/nano-banana-pro/edit");
     expect(lastCall[1].input).toMatchObject({
-      prompt: "scene 2",
-      reference_image_url: "https://example.com/photo.jpg",
-      negative_prompt: "no flat",
+      image_urls: ["https://example.com/photo.jpg"],
     });
+    expect(lastCall[1].input.prompt).toContain("scene 2");
   });
 });
 

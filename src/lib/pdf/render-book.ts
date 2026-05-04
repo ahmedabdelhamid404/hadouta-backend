@@ -366,7 +366,7 @@ const SHARED_CSS = `
     z-index: 1;
   }
   .cover-illus img {
-    width: 100%; height: 100%; object-fit: cover; display: block;
+    width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block;
   }
   /* Watercolor fade at bottom of cover image */
   .cover-illus::after {
@@ -499,7 +499,7 @@ const SHARED_CSS = `
     z-index: 2;
     position: relative;
   }
-  .body-illus img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .body-illus img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
   .body-illus::after {
     content: "";
     position: absolute; inset: 0;
@@ -604,7 +604,7 @@ const SHARED_CSS = `
     overflow: hidden;
     z-index: 1;
   }
-  .end-illus img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .end-illus img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
   .end-illus::after {
     content: "";
     position: absolute;

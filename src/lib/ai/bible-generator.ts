@@ -5,7 +5,7 @@
 // Per docs/design/specs/2026-05-03-illustration-pipeline-redesign-spec.md §5.
 
 import { generateObject, generateText } from "ai";
-import type { LanguageModelV1 } from "ai";
+import { openai } from "@ai-sdk/openai";
 import { resolveTextModel } from "./router.js";
 import { bibleSchema, type Bible } from "./schemas/bible.js";
 import { buildBibleSystemPrompt } from "./prompts/bible-system-prompt.js";
@@ -42,25 +42,27 @@ export interface BibleGeneratorInternalOptions {
 }
 
 /**
- * Calls a vision-capable model (gpt-4o or similar) to extract identity-anchoring
- * facts from a customer-uploaded child photo. Returns 1-3 sentences in English
- * describing hair, skin, eyes, distinguishing features — no background, no
- * personality speculation, no name. The result feeds the Bible's mainChild
- * appearance block.
+ * Calls gpt-4o (NOT gpt-4o-mini — meaningfully weaker at multimodal) to extract
+ * identity-anchoring facts from a customer-uploaded child photo. Returns 2–4
+ * sentences in English describing hair, skin, eyes, distinguishing features,
+ * AND any traditional/cultural clothing visible — no background, no personality
+ * speculation, no name. The result feeds the Bible's mainChild appearance +
+ * outfit blocks.
+ *
+ * Per Phase H verification (2026-05-04): gpt-4o-mini missed a white Egyptian
+ * galabeya entirely, producing generic "colorful t-shirt" outfit guesses.
+ * Vision quality is worth the small cost increase (~$0.005 per book).
  */
-async function describePhoto(
-  photoUrl: string,
-  model: LanguageModelV1,
-): Promise<string> {
+async function describePhoto(photoUrl: string): Promise<string> {
   const result = await generateText({
-    model,
+    model: openai("gpt-4o"),
     messages: [
       {
         role: "user",
         content: [
           {
             type: "text",
-            text: "Describe the child in this photo for a children's book illustrator. Focus on: hair (color, type, length, style), skin tone, eye color/shape, distinguishing features (dimples, freckles, glasses, gap teeth, etc.). Do NOT include the background or the photographer's intent. Output 1–3 sentences in ENGLISH only. Do NOT include the child's name. Do NOT speculate about emotion or personality. Just visual facts that anchor identity across illustrated scenes.",
+            text: "Describe the child in this photo for a children's book illustrator. You MUST cover three things: (1) FACE features — hair (color, type, length, style — be specific about whether bangs/fringe are present and how they fall), skin tone, eye shape and color, distinguishing features (dimples, freckles, glasses, gap teeth, scars, etc.). (2) CLOTHING — describe what the child is wearing in detail. If they're wearing traditional cultural clothing (galabeya / thobe / hijab / abaya / etc.), name it explicitly — this is critical because the illustrator will lock the outfit across the entire 17-page book. Do NOT default to generic 't-shirt + shorts' if traditional clothing is visible. (3) If shoes are visible, describe them too. Do NOT include the background, the photographer's intent, or speculate about emotion / personality. Output 2–4 sentences in ENGLISH only. Do NOT include the child's name. Just visual facts that anchor identity across illustrated scenes.",
           },
           { type: "image", image: photoUrl },
         ],
@@ -96,7 +98,7 @@ export async function generateBible(
   if (wizardData.photoUrl && !photoDescription) {
     photoDescription = internal._visionCallOverride
       ? (await internal._visionCallOverride(wizardData.photoUrl)).text
-      : await describePhoto(wizardData.photoUrl, resolved.model);
+      : await describePhoto(wizardData.photoUrl);
   }
 
   const persona = wizardData.personaId
