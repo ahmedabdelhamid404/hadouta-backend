@@ -20,7 +20,10 @@ export const childInfoSchema = z.object({
 });
 
 export const appearanceSchema = z.object({
-  appearanceInputType: z.enum(["photo", "description"]).optional(),
+  appearanceInputType: z.enum(["photo", "description", "persona"]).optional(),
+  // When appearanceInputType === "persona", picks an entry from
+  // src/lib/ai/personas.ts (e.g. "curly-girl-young", "hijab-girl-older").
+  mainChildPersonaId: z.string().max(60).optional(),
   descriptionSkinTone: z.string().max(20).optional(),
   descriptionHair: z.string().max(200).optional(),
   descriptionClothingStyle: z

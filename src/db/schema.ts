@@ -116,6 +116,7 @@ export const supportingCharacterRoleEnum = pgEnum(
 export const appearanceInputTypeEnum = pgEnum("appearance_input_type", [
   "photo",
   "description",
+  "persona",
 ]);
 
 export const clothingStyleEnum = pgEnum("clothing_style", [
@@ -247,6 +248,10 @@ export const orders = pgTable("orders", {
   childSpecialTraits: text("child_special_traits"),
 
   appearanceInputType: appearanceInputTypeEnum("appearance_input_type"),
+  // When customer picks a persona from the library (no photo, no free-form
+  // description) — e.g. "curly-girl-young", "hijab-girl-older". Threaded into
+  // the Bible generator. See src/lib/ai/personas.ts for the full set.
+  mainChildPersonaId: text("main_child_persona_id"),
   descriptionSkinTone: text("description_skin_tone"),
   descriptionHair: text("description_hair"),
   descriptionClothingStyle: clothingStyleEnum("description_clothing_style"),

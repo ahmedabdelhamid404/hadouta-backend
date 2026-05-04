@@ -166,11 +166,11 @@ export async function runGenerationPipeline(
         theme: ctx.theme.titleAr,
         moralValue: ctx.moralValue.nameAr,
         photoUrl: customerPhotoUrl,
-        // Persona-id column doesn't exist yet (Phase G adds main_child_persona_id).
-        // For now, fall back to childSpecialTraits as a free-form description seed
-        // when no photo is provided. If neither exists, the Bible generator
-        // throws — caught + persisted by the outer try/catch.
-        personaId: null,
+        // Persona id from wizard (Phase G), free-form description fallback
+        // from childSpecialTraits. The Bible generator throws cleanly if all
+        // three (photo / persona / description) are absent — caught + persisted
+        // by the outer try/catch.
+        personaId: ctx.order.mainChildPersonaId ?? null,
         childDescription: ctx.order.childSpecialTraits ?? null,
       },
     });
