@@ -14,6 +14,8 @@ import { fal } from "@fal-ai/client";
 import { uploadImage } from "../cloudinary.js";
 
 const FLUX_PRO_ENDPOINT = "fal-ai/flux-pro/v1.1";
+const FLUX_REDUX_ENDPOINT = "fal-ai/flux-pro/v1.1/redux";
+const FLUX_PULID_ENDPOINT = "fal-ai/flux-pulid";
 
 let _falConfigured = false;
 function ensureFalConfigured(): void {
@@ -101,9 +103,104 @@ async function downloadAsBuffer(url: string): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
-// === Legacy batch shape — kept temporarily so the orchestrator keeps
-// compiling between Tasks 9–10. Task 11 rewrites the orchestrator to use
-// the new Bible-driven shape and removes this shim. ===
+// === Body-page generation ===
+//
+// Routes per page based on whether the customer uploaded a photo:
+//   - WITH photo: fal-ai/flux-pulid endpoint, photo as reference_image_url
+//                 → injects actual face geometry into the illustration
+//   - WITHOUT photo: fal-ai/flux-pro/v1.1/redux, cover as image_url
+//                 → image-to-image conditioning carries character/style continuity
+//
+// PuLID + Redux both accept native negative_prompt (unlike Flux 1.1 Pro).
+
+export interface BodyInput {
+  orderId: string;
+  pageNumber: number;
+  positivePrompt: string;
+  negativePrompt: string;
+  coverImageUrl: string;
+  customerPhotoUrl: string | null;
+}
+
+export async function generateBodyIllustration(
+  input: BodyInput,
+): Promise<IllustrationResult> {
+  ensureFalConfigured();
+  const startedAt = Date.now();
+
+  const usePuLID = !!input.customerPhotoUrl;
+
+  let result;
+  if (usePuLID) {
+    result = await fal.subscribe(FLUX_PULID_ENDPOINT, {
+      input: {
+        prompt: input.positivePrompt,
+        negative_prompt: input.negativePrompt,
+        reference_image_url: input.customerPhotoUrl!,
+        image_size: "portrait_4_3",
+        num_inference_steps: 28,
+        guidance_scale: 4,
+        // Per research: 0.7-0.8 is the identity-strength sweet spot.
+        // Default is 1.0 — too strong, faces dominate scene composition.
+        id_weight: 0.75,
+        // Mid-window injection: let Flux build composition first (steps 0–start),
+        // then inject identity, then polish style (steps end–total).
+        start_step: 0,
+        enable_safety_checker: true,
+      },
+      logs: false,
+    });
+  } else {
+    result = await fal.subscribe(FLUX_REDUX_ENDPOINT, {
+      input: {
+        // Note: Redux endpoint uses prompt + image_url for image-to-image
+        // conditioning. The cover-derived character + style transfers via
+        // image_url; the per-page scene comes via prompt.
+        prompt: `${input.positivePrompt}. Avoid: ${input.negativePrompt}.`,
+        image_url: input.coverImageUrl,
+        image_size: "portrait_4_3",
+        num_inference_steps: 28,
+        guidance_scale: 3.5,
+        output_format: "png",
+      },
+      logs: false,
+    });
+  }
+
+  const durationMs = Date.now() - startedAt;
+  const image = (result as { data?: { images?: Array<{ url?: string; content_type?: string }> } })
+    .data?.images?.[0];
+  if (!image?.url) {
+    throw new Error(
+      `Flux returned no image for page ${input.pageNumber}. Response: ${JSON.stringify(result.data ?? null).slice(0, 500)}`,
+    );
+  }
+
+  const buffer = await downloadAsBuffer(image.url);
+  const uploaded = await uploadImage(
+    buffer,
+    input.orderId,
+    `illustration_page_${input.pageNumber}`,
+    image.content_type ?? "image/png",
+  );
+
+  return {
+    url: uploaded.url,
+    contentType: uploaded.contentType,
+    fileSize: uploaded.fileSize,
+    modelId: usePuLID ? "flux-pulid" : "flux-pro-1.1",
+    durationMs,
+  };
+}
+
+// === Batch orchestrator ===
+//
+// Cover first (its URL is the reference for all body pages without photos).
+// Then body pages run in parallel with bounded concurrency. Concurrency 5 is
+// permissive within Fal.ai's typical rate limits; if 429s appear in prod,
+// reduce in ai_settings.
+
+const ILLUSTRATION_CONCURRENCY = 5;
 
 export interface BatchInput {
   orderId: string;
@@ -132,16 +229,42 @@ export async function generateAllIllustrations(
     negativePrompt: input.cover.negativePrompt,
   });
 
-  // Body pages — stub returning cover for every page until Task 10 implements
-  // generateBodyIllustration with PuLID/reference handling. Lets typecheck +
-  // existing flows compile. The stub is exercised end-to-end only after Task 10.
-  const pages: Array<IllustrationResult & { pageNumber: number }> = input.pages.map(
-    (p) => ({ ...cover, pageNumber: p.pageNumber }),
-  );
+  const pages = await runWithConcurrency(input.pages, ILLUSTRATION_CONCURRENCY, async (page) => {
+    const result = await generateBodyIllustration({
+      orderId: input.orderId,
+      pageNumber: page.pageNumber,
+      positivePrompt: page.positivePrompt,
+      negativePrompt: page.negativePrompt,
+      coverImageUrl: cover.url,
+      customerPhotoUrl: input.customerPhotoUrl,
+    });
+    return { ...result, pageNumber: page.pageNumber };
+  });
 
   return {
     cover,
     pages,
     totalDurationMs: Date.now() - startedAt,
   };
+}
+
+async function runWithConcurrency<T, U>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<U>,
+): Promise<U[]> {
+  const results: U[] = new Array(items.length);
+  let cursor = 0;
+  async function worker(): Promise<void> {
+    while (true) {
+      const i = cursor++;
+      const item = items[i];
+      if (item === undefined || i >= items.length) return;
+      results[i] = await fn(item);
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker()),
+  );
+  return results;
 }

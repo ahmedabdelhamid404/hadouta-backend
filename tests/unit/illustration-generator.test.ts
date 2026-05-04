@@ -34,7 +34,11 @@ beforeEach(() => {
 });
 
 import { fal } from "@fal-ai/client";
-import { generateCoverIllustration } from "../../src/lib/ai/illustration-generator.js";
+import {
+  generateCoverIllustration,
+  generateBodyIllustration,
+  generateAllIllustrations,
+} from "../../src/lib/ai/illustration-generator.js";
 
 describe("generateCoverIllustration", () => {
   it("calls fal-ai/flux-pro/v1.1 with positive + negative prompt", async () => {
@@ -79,5 +83,80 @@ describe("generateCoverIllustration", () => {
         negativePrompt: "y",
       }),
     ).rejects.toThrow(/no image|empty/i);
+  });
+});
+
+describe("generateBodyIllustration", () => {
+  it("uses Redux endpoint with cover as reference when no photoUrl", async () => {
+    (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { images: [{ url: "https://fal.ai/page1.png", content_type: "image/png" }] },
+    });
+
+    await generateBodyIllustration({
+      orderId: "order-123",
+      pageNumber: 1,
+      positivePrompt: "scene 1",
+      negativePrompt: "no flat",
+      coverImageUrl: "https://example.com/cover.png",
+      customerPhotoUrl: null,
+    });
+
+    const lastCall = (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1)!;
+    expect(lastCall[0]).toBe("fal-ai/flux-pro/v1.1/redux");
+    expect(lastCall[1].input).toMatchObject({
+      prompt: expect.stringContaining("scene 1"),
+      image_url: "https://example.com/cover.png",
+    });
+    expect(lastCall[1].input.prompt).toContain("no flat");
+  });
+
+  it("uses PuLID endpoint with photo as reference when photoUrl provided", async () => {
+    (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { images: [{ url: "https://fal.ai/page2.png", content_type: "image/png" }] },
+    });
+
+    await generateBodyIllustration({
+      orderId: "order-123",
+      pageNumber: 2,
+      positivePrompt: "scene 2",
+      negativePrompt: "no flat",
+      coverImageUrl: "https://example.com/cover.png",
+      customerPhotoUrl: "https://example.com/photo.jpg",
+    });
+
+    const lastCall = (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1)!;
+    expect(lastCall[0]).toBe("fal-ai/flux-pulid");
+    expect(lastCall[1].input).toMatchObject({
+      prompt: "scene 2",
+      reference_image_url: "https://example.com/photo.jpg",
+      negative_prompt: "no flat",
+    });
+  });
+});
+
+describe("generateAllIllustrations (orchestrator)", () => {
+  it("generates cover first, then bodies", async () => {
+    let callCount = 0;
+    (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      callCount++;
+      return {
+        data: { images: [{ url: `https://fal.ai/img-${callCount}.png`, content_type: "image/png" }] },
+      };
+    });
+
+    const result = await generateAllIllustrations({
+      orderId: "order-123",
+      cover: { positivePrompt: "cover", negativePrompt: "no flat" },
+      pages: Array.from({ length: 3 }, (_, i) => ({
+        pageNumber: i + 1,
+        positivePrompt: `page ${i + 1}`,
+        negativePrompt: "no flat",
+      })),
+      customerPhotoUrl: null,
+    });
+
+    expect(result.cover.url).toBeTruthy();
+    expect(result.pages).toHaveLength(3);
+    expect(callCount).toBe(4); // 1 cover + 3 pages
   });
 });
