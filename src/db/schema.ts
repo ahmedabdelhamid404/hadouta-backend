@@ -354,6 +354,12 @@ export const generations = pgTable("generations", {
     .references(() => orders.id, { onDelete: "cascade" }),
   status: generationStatusEnum("status").notNull().default("queued"),
   storyJson: jsonb("story_json"), // full Claude output: {title, dedication, pages: [...]}
+  // Bible — locked character/setting/style/cultural anchors that all 17
+  // illustration prompts inherit from. Null on generations predating the
+  // Bible system (Sprint 2 era). See ADR-024 + 2026-05-03-illustration-
+  // pipeline-redesign-spec.md §5.1.
+  bibleJson: jsonb("bible_json"),
+  bibleRegeneratedAt: timestamp("bible_regenerated_at", { withTimezone: true }),
   coverUrl: text("cover_url"),
   pdfUrl: text("pdf_url"),
   // Cost-tracking — captured per generation so admin can see actual $ spent
