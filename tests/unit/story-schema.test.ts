@@ -17,7 +17,7 @@ const VALID_BASE = {
       emotionalBeat: "joyful anticipation",
       moralMoment: false,
       text: "كان في يوم مشمس، هُنَا صحيت بدري عشان عيد ميلادها.",
-      illustrationPrompt:
+      scene:
         "Egyptian girl waking up excitedly on her birthday in a Cairo apartment bedroom, watercolor warm light",
     },
     {
@@ -26,7 +26,7 @@ const VALID_BASE = {
       emotionalBeat: "the moment of choice",
       moralMoment: true,
       text: "هُنَا قررت تطلب المساعدة. قالت: «يا جماعة، لو كل واحد ساعد شوية، هنقدر نرتب بسرعة!»",
-      illustrationPrompt:
+      scene:
         "Egyptian girl gathering her friends to help in a Cairo living room, watercolor",
     },
     {
@@ -35,7 +35,7 @@ const VALID_BASE = {
       emotionalBeat: "warm internal connection",
       moralMoment: false,
       text: "بَنُوا كل حاجة سَوا. هُنَا كانت حاسة بحاجة دافية في صدرها.",
-      illustrationPrompt: "Children working together in joyful Cairo home scene, watercolor",
+      scene: "Children working together in joyful Cairo home scene, watercolor",
     },
     {
       number: 4,
@@ -43,7 +43,7 @@ const VALID_BASE = {
       emotionalBeat: "internal warmth",
       moralMoment: false,
       text: "في عيد ميلادها الجاي، هُنَا كانت متحمسة عشان تعمل كل حاجة مع أصحابها.",
-      illustrationPrompt: "Cairo birthday scene with friends in soft watercolor",
+      scene: "Cairo birthday scene with friends in soft watercolor",
     },
   ],
 };

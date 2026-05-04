@@ -45,11 +45,12 @@ export const storyPageSchema = z.object({
     .describe(
       "Arabic page text. Mixed register: simplified MSA narration + Egyptian Arabic dialogue (in « » marks). Selective diacritics per age band. Word count scaled by age band.",
     ),
-  illustrationPrompt: z
+  scene: z
     .string()
-    .min(20)
+    .min(15, "scene must be ≥15 chars — short scene addendum, not a full prompt")
+    .max(280, "scene must be ≤280 chars — keep it tight; the Bible carries the rest")
     .describe(
-      "English illustration prompt for this page. Must include: subject + action + setting + watercolor style anchor + Cairo middle-class context.",
+      "Short English scene addendum for THIS page. 1–2 sentences max. Describe ONLY what is unique to this page (action, location-within-setting, emotional moment). DO NOT include character description, style, or setting details — those come from the Bible. Example: 'Hena gathers kahk biscuits from a metal tray on the coffee table' — NOT 'Egyptian girl in apartment, watercolor style, gathering biscuits from a tray.'",
     ),
 });
 
@@ -70,9 +71,10 @@ export const storyOutputSchema = z.object({
     ),
   coverDescription: z
     .string()
-    .min(30)
+    .min(20)
+    .max(280)
     .describe(
-      "English illustration prompt for the COVER (separate from page 1). Iconic + emotional summary of the whole story. Should not duplicate page 1's opening-scene framing.",
+      "Short English scene description for the COVER page. Iconic + emotional summary of the whole story — 1–2 sentences. DO NOT include character/style/setting boilerplate (those come from the Bible). Example: 'Hena holding a tray of kahk surrounded by friends in her living room, golden afternoon light.'",
     ),
   parentDiscussionQuestion: z
     .string()

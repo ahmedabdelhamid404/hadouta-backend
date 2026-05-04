@@ -144,7 +144,7 @@ async function runGenerationPipeline(
         generationId,
         pageNumber: page.number,
         storyText: page.text,
-        illustrationPrompt: page.illustrationPrompt,
+        illustrationPrompt: page.scene,
       });
     }
 
@@ -158,7 +158,7 @@ async function runGenerationPipeline(
       cover: { prompt: storyResult.story.coverDescription },
       pages: storyResult.story.pages.map((p) => ({
         pageNumber: p.number,
-        prompt: p.illustrationPrompt,
+        prompt: p.scene,
       })),
     });
     console.log(

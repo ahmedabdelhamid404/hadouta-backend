@@ -24,7 +24,7 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
     title: "لَيْلَى وَالدَلْو الصغير",
     dedication: "إلى لَيْلَى — أحلى حاجة تَعْطِيها هي اللي بتغلى عَلَيكي",
     coverDescription:
-      "Egyptian girl ~4 years old, dark curly hair, in a Cairo park, standing with another small girl, both holding a small red sand bucket between them, watercolor warm sunset light, simple iconic friendship scene with cream and terracotta tones",
+      "Layla and Nour standing close together holding her small red sand bucket between them, both smiling, golden sunset light",
     parentDiscussionQuestion:
       "في حاجة بتحبيها أوي عندك؟ لو لقيتي صاحبة محتاجاها، هتعمل إيه؟",
     moralStatement:
@@ -36,8 +36,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         emotionalBeat: "joy and possession",
         moralMoment: false,
         text: "كان عند لَيْلَى دَلْو صغير لونه أحمر، أحلى لعبة عندها. بتاخده معاها كل يوم في الحديقة، وبتعمل بيه قِلَاع من الرَمْل عالية.",
-        illustrationPrompt:
-          "Egyptian girl ~4 years old in a Cairo neighborhood park sandbox, holding a small red bucket happily, watercolor warm afternoon light, sense of cherished possession",
+        scene:
+          "Layla in a sandbox holding her small red bucket happily, scooping sand with cherished pride",
       },
       {
         number: 2,
@@ -45,8 +45,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         emotionalBeat: "noticing another's loneliness",
         moralMoment: false,
         text: "في يوم، شافت لَيْلَى بنت صغيرة جديدة قاعدة لِوَحْدها على الكرسي. إيديها فاضية، وعينيها بتبص على الأطفال اللي بيلعبوا.",
-        illustrationPrompt:
-          "Small girl in plain dress sitting alone on a wooden bench in Cairo park, empty hands, watching other children play, watercolor style with subtle melancholy tones",
+        scene:
+          "A new small girl sits alone on a wooden bench, empty hands resting in lap, watching other children play",
       },
       {
         number: 3,
@@ -54,8 +54,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         emotionalBeat: "first attempt — failed",
         moralMoment: false,
         text: "لَيْلَى لَوَّحَت لها بإيدها وقالت: «هَاي!» البنت بَصَّت لها وما رَدِّتش. لَيْلَى افْتَكَرَت إنها مَكْسُوفة.",
-        illustrationPrompt:
-          "Layla waving cheerfully from a distance, the new girl looking down shyly, watercolor style, Cairo park, gentle quiet moment",
+        scene:
+          "Layla waves cheerfully from a few steps away, the new girl looking down at her own hands shyly",
       },
       {
         number: 4,
@@ -63,8 +63,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         emotionalBeat: "second attempt — failed",
         moralMoment: false,
         text: "لَيْلَى جَابَت كرتها وقالت: «تعالي نِلعب!» البنت هَزِّت راسها. لَيْلَى افْتَكَرَت: «يمكن مش عاوزة كرة.»",
-        illustrationPrompt:
-          "Layla offering a ball to a shy girl on a bench, the girl gently shaking her head, watercolor style, soft afternoon light",
+        scene:
+          "Layla holds out a colorful ball with bright eyes, the shy girl gently shakes her head no",
       },
       {
         number: 5,
@@ -72,8 +72,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         emotionalBeat: "the inner choice (dark moment of decision)",
         moralMoment: false,
         text: "لَيْلَى بَصِّت على دلوها الأحمر. بَصِّت على إيدين البنت الفاضيين. وفَكَّرَت فِكْرة كبيرة في قلبها الصغير.",
-        illustrationPrompt:
-          "Close-up of Layla looking thoughtfully at her beloved red bucket, empathetic expression, watercolor style with soft contemplative mood",
+        scene:
+          "Close-up of Layla looking thoughtfully at her beloved red bucket cradled in her hands, contemplative expression",
       },
       {
         number: 6,
@@ -81,8 +81,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         emotionalBeat: "act of generosity (moral demonstrated)",
         moralMoment: true,
         text: "مِشِيت ناحيتها وحَطِّت الدَلْو في إيدها. قالت بصوت لطيف: «ده ليكي دلوقتي. تعالي نبني سَوا.»",
-        illustrationPrompt:
-          "Layla placing her red bucket gently into the new girl's hands, both girls at eye level, watercolor warm tones, defining moment of generosity",
+        scene:
+          "Layla places her red bucket gently into the new girl's hands, both girls at eye level — defining moment",
       },
       {
         number: 7,
@@ -90,8 +90,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         emotionalBeat: "connection and reciprocity",
         moralMoment: false,
         text: "البنت ابْتَسَمَت لأول مرة. قالت: «أنا اسمي نُور.» وقامت تِجْري ورا لَيْلَى ناحية الرَمْلَة.",
-        illustrationPrompt:
-          "Two girls running together toward a sandbox, the new girl now smiling holding the red bucket, watercolor style with warm joyful motion",
+        scene:
+          "The two girls running side by side toward the sandbox, Nour now smiling and holding the red bucket",
       },
       {
         number: 8,
@@ -99,8 +99,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         emotionalBeat: "internal warmth (show, not tell)",
         moralMoment: false,
         text: "بَنُوا قَلْعة كبيرة سَوا. الشمس كانت بتغيب، ولَيْلَى كانت حاسة بحاجة دافية في صدرها — أحلى من الدَلْو.",
-        illustrationPrompt:
-          "Two girls together at sunset finishing a large sand castle in Cairo park, golden hour orange and terracotta tones, watercolor style, sense of meaningful warmth",
+        scene:
+          "The two girls together at sunset finishing a large sand castle, faces lit by golden hour light",
       },
     ],
   },

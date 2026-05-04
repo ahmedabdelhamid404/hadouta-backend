@@ -165,7 +165,7 @@ async function main() {
       generationId: generation.id,
       pageNumber: page.number,
       storyText: page.text,
-      illustrationPrompt: page.illustrationPrompt,
+      illustrationPrompt: page.scene,
     });
   }
   console.log(`\nPersisted story + ${result.story.pages.length} page rows.`);
@@ -177,7 +177,7 @@ async function main() {
       cover: { prompt: result.story.coverDescription },
       pages: result.story.pages.map((p) => ({
         pageNumber: p.number,
-        prompt: p.illustrationPrompt,
+        prompt: p.scene,
       })),
     });
 

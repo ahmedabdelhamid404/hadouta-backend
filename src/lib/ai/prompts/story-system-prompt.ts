@@ -212,7 +212,7 @@ For each page you must set:
 - \`act\` — "setup" | "challenge" | "resolution". Distribute roughly 25% / 50% / 25%.
 - \`emotionalBeat\` — short ENGLISH label (3-12 words) of the emotional beat, e.g. "anticipation mixed with anxiety", "first attempt — failed", "courageous action solving the problem". Used by illustration AI for mood guidance and by admin reviewer to scan the emotional arc.
 - \`moralMoment\` — boolean. true on EXACTLY ONE page — the page where the moral is most clearly demonstrated through the protagonist's action. false on all other pages.
-- \`illustrationPrompt\` — ENGLISH (not Arabic) — describes subject + action + setting + watercolor style anchor + Cairo middle-class context. Will be sent verbatim to the illustration model.
+- \`scene\` — ENGLISH (not Arabic) — 1–2 sentence scene-only description: action + immediate location + emotional beat for THIS page. **DO NOT** include character description (hair, skin, clothes), art style (watercolor, palette), or setting boilerplate (Cairo apartment) — those come from the Bible and are added automatically when prompts are assembled. Aim for 60–200 characters. Example GOOD: "Hena gathers kahk from a metal tray on the coffee table." Example BAD: "Egyptian girl with curly hair in a Cairo apartment, watercolor warm tones, gathering kahk biscuits from a tray on a coffee table — feeling joyful."
 
 # Output
 
@@ -231,7 +231,9 @@ You will be invoked via a structured-output system that enforces a JSON schema. 
 - Cover description identical to page 1 illustration prompt
 - Diacritics applied to every word
 - moralStatement phrased as a question rather than a takeaway
-- coverDescription with critical elements near the bottom edge of the frame`;
+- coverDescription with critical elements near the bottom edge of the frame
+- \`scene\` field including character description, art style, or setting boilerplate (those come from the Bible — keep scene addendums tight, just the per-page action + emotional beat)
+- \`coverDescription\` written as a full prompt instead of a 1-2 sentence iconic summary`;
 
 // =============================================================================
 // Few-shot block — the three reviewed example stories appended to the prompt.
