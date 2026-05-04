@@ -183,7 +183,7 @@ async function main() {
         positivePrompt: p.scene,
         negativePrompt: "NOT photorealistic, NOT 3D, NOT cartoon, NOT anime",
       })),
-      customerPhotoUrl: null,
+      customerPhotoUrls: [],
     });
 
     console.log(

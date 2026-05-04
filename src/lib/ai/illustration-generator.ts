@@ -78,8 +78,8 @@ export interface CoverInput {
   orderId: string;
   positivePrompt: string;
   negativePrompt: string;
-  /** Optional — when set, used as reference image so cover reflects the actual child. */
-  customerPhotoUrl?: string | null;
+  /** Optional — when set (1-3 photos), used as reference images so cover reflects the actual child. */
+  customerPhotoUrls?: string[];
 }
 
 export interface IllustrationResult {
@@ -103,14 +103,16 @@ export async function generateCoverIllustration(
     ? `${input.positivePrompt}. Avoid: ${input.negativePrompt}.`
     : input.positivePrompt;
 
-  // If a customer photo was provided, use the edit endpoint with the photo
-  // as reference (preserves identity). Otherwise text-to-image.
+  // If customer photos provided, use the edit endpoint with ALL photos
+  // (multi-angle gives Gemini richer 3D face understanding for stronger
+  // identity preservation). Otherwise fall back to text-to-image.
+  const photoUrls = input.customerPhotoUrls ?? [];
   let result;
-  if (input.customerPhotoUrl) {
+  if (photoUrls.length > 0) {
     result = await fal.subscribe(NANO_BANANA_PRO_EDIT, {
       input: {
         prompt: promptWithNegatives,
-        image_urls: [input.customerPhotoUrl],
+        image_urls: photoUrls,
         aspect_ratio: "3:4",
         output_format: "png",
         num_images: 1,
@@ -150,7 +152,7 @@ export async function generateCoverIllustration(
     url: uploaded.url,
     contentType: uploaded.contentType,
     fileSize: uploaded.fileSize,
-    modelId: input.customerPhotoUrl ? "nano-banana-pro-edit" : "nano-banana-pro",
+    modelId: photoUrls.length > 0 ? "nano-banana-pro-edit" : "nano-banana-pro",
     durationMs,
   };
 }
@@ -179,7 +181,8 @@ export interface BodyInput {
   positivePrompt: string;
   negativePrompt: string;
   coverImageUrl: string;
-  customerPhotoUrl: string | null;
+  /** 1-3 customer photos. Multi-angle uploads improve identity preservation. */
+  customerPhotoUrls: string[];
 }
 
 export async function generateBodyIllustration(
@@ -188,13 +191,13 @@ export async function generateBodyIllustration(
   ensureFalConfigured();
   const startedAt = Date.now();
 
-  // Phase H iteration 4 (2026-05-05): passing [coverUrl, photoUrl] caused Nano
-  // Banana to anchor on the cover image and produce near-duplicates across
-  // pages. Fix: prefer ONLY the photo as reference when available — child
-  // identity preserved, scene varies freely per prompt. When no photo, fall
-  // back to cover (so character at least matches; better than no reference).
-  const imageUrls: string[] = input.customerPhotoUrl
-    ? [input.customerPhotoUrl]
+  // Phase H iteration 8 (2026-05-05): multi-photo support. Pass ALL customer
+  // photos (typically 1-3 from wizard's photo-upload, different angles) as
+  // references — Gemini's multimodal vision builds richer 3D face geometry
+  // from multiple angles than from one. When no photos, fall back to cover
+  // (so character at least matches; better than no reference).
+  const imageUrls: string[] = input.customerPhotoUrls.length > 0
+    ? input.customerPhotoUrls
     : [input.coverImageUrl];
 
   const promptWithNegatives = input.negativePrompt
@@ -255,7 +258,7 @@ export interface BatchInput {
     positivePrompt: string;
     negativePrompt: string;
   }>;
-  customerPhotoUrl: string | null;
+  customerPhotoUrls: string[];
 }
 
 export interface BatchResult {
@@ -272,7 +275,7 @@ export async function generateAllIllustrations(
     orderId: input.orderId,
     positivePrompt: input.cover.positivePrompt,
     negativePrompt: input.cover.negativePrompt,
-    customerPhotoUrl: input.customerPhotoUrl,
+    customerPhotoUrls: input.customerPhotoUrls,
   });
 
   const pages = await runWithConcurrency(input.pages, ILLUSTRATION_CONCURRENCY, async (page) => {
@@ -282,7 +285,7 @@ export async function generateAllIllustrations(
       positivePrompt: page.positivePrompt,
       negativePrompt: page.negativePrompt,
       coverImageUrl: cover.url,
-      customerPhotoUrl: input.customerPhotoUrl,
+      customerPhotoUrls: input.customerPhotoUrls,
     });
     return { ...result, pageNumber: page.pageNumber };
   });

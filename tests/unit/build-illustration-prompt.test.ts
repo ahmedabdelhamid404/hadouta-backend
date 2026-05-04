@@ -120,6 +120,27 @@ describe("buildIllustrationPrompt", () => {
     expect(defaultPrompt).toContain("yellow cotton sundress");
   });
 
+  it("body pages include identity-preservation language", () => {
+    const { positive } = buildIllustrationPrompt({
+      bible: SAMPLE_BIBLE,
+      scene: "Hena gathers kahk",
+      pageNumber: 5,
+    });
+    expect(positive).toMatch(/identity|EXACTLY match|same face/i);
+    expect(positive.toLowerCase()).toContain("reference photo");
+  });
+
+  it("cover (pageNumber=0) does NOT include the body-only identity language", () => {
+    // Cover gets a different scene block — it doesn't need the per-page
+    // identity-preservation guard because there's no prior page to drift from.
+    const { positive } = buildIllustrationPrompt({
+      bible: SAMPLE_BIBLE,
+      scene: "Hena holding kahk surrounded by friends",
+      pageNumber: 0,
+    });
+    expect(positive).not.toMatch(/IDENTITY PRESERVATION/);
+  });
+
   it("for cover (pageNumber=0), uses default outfit (no variation lookup)", () => {
     const { positive } = buildIllustrationPrompt({
       bible: SAMPLE_BIBLE,

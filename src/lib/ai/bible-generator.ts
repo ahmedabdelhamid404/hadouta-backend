@@ -32,7 +32,8 @@ export interface GenerateBibleInput {
     /** Optional: free-form child description from wizard (the "describe my own" escape). */
     childDescription?: string | null;
   };
-  /** AI router model id — defaults to gpt-4o-mini for Bible. */
+  /** AI router model id — defaults to gpt-4o (per user instruction 2026-05-05).
+   * NEVER gpt-4o-mini (see feedback memory). */
   modelId?: string;
 }
 
@@ -89,7 +90,7 @@ export async function generateBible(
     );
   }
 
-  const modelId = input.modelId ?? "gpt-4o-mini";
+  const modelId = input.modelId ?? "gpt-4o";
   const resolved = resolveTextModel(modelId);
 
   // If photoUrl set and no pre-supplied description, call vision model.

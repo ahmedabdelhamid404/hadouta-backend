@@ -155,7 +155,11 @@ export async function runGenerationPipeline(
     // anchors that all 17 illustration prompts inherit from. Reads the
     // customer's uploaded photo (if any) for the vision-described path,
     // or falls back to childSpecialTraits as a free-form description seed.
-    const customerPhotoUrl = await loadMainChildPhotoUrl(orderId);
+    const customerPhotoUrls = await loadMainChildPhotoUrls(orderId);
+    // Bible vision uses the FIRST photo (one good face shot is enough for
+    // gpt-4o vision to extract clothing/features). Image generation uses ALL
+    // photos for multi-angle reference.
+    const primaryPhotoForVision = customerPhotoUrls[0] ?? null;
     const bible = await generateBible({
       story: storyResult.story,
       wizardData: {
@@ -165,7 +169,7 @@ export async function runGenerationPipeline(
         childGender: ctx.order.childGender as "boy" | "girl",
         theme: ctx.theme.titleAr,
         moralValue: ctx.moralValue.nameAr,
-        photoUrl: customerPhotoUrl,
+        photoUrl: primaryPhotoForVision,
         // Persona id from wizard (Phase G), free-form description fallback
         // from childSpecialTraits. The Bible generator throws cleanly if all
         // three (photo / persona / description) are absent — caught + persisted
@@ -211,7 +215,7 @@ export async function runGenerationPipeline(
         positivePrompt: p.positive,
         negativePrompt: p.negative,
       })),
-      customerPhotoUrl,
+      customerPhotoUrls,
     });
     console.log(
       `[jobs/generate-book] illustrations done: ${illustrations.pages.length + 1} images, ${illustrations.totalDurationMs}ms`,
@@ -292,13 +296,12 @@ export async function runGenerationPipeline(
  * Looks up the customer-uploaded main-child photo URL on Cloudinary, if any.
  * Returns null when no photo was uploaded (the no-photo wizard path).
  */
-async function loadMainChildPhotoUrl(orderId: string): Promise<string | null> {
+async function loadMainChildPhotoUrls(orderId: string): Promise<string[]> {
   const rows = await db
     .select({ url: photos.url })
     .from(photos)
-    .where(and(eq(photos.orderId, orderId), eq(photos.ownerType, "main_child")))
-    .limit(1);
-  return rows[0]?.url ?? null;
+    .where(and(eq(photos.orderId, orderId), eq(photos.ownerType, "main_child")));
+  return rows.map((r) => r.url);
 }
 
 async function loadOrderContext(orderId: string) {

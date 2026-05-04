@@ -97,7 +97,7 @@ describe("generateBodyIllustration", () => {
       positivePrompt: "scene 1",
       negativePrompt: "no flat",
       coverImageUrl: "https://example.com/cover.png",
-      customerPhotoUrl: null,
+      customerPhotoUrls: [],
     });
 
     const lastCall = (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1)!;
@@ -110,9 +110,9 @@ describe("generateBodyIllustration", () => {
   });
 
   it("uses Nano Banana edit with photo only (NOT cover) when photoUrl provided", async () => {
-    // Per iteration 5 fix: when a customer photo is available, body pages use
-    // ONLY the photo as reference. Cover is dropped to prevent the cover-clone
-    // duplication observed in iteration 4.
+    // Per iteration 7 (rollback to iter 5 architecture): body pages use ONLY
+    // the photo as reference. Identity continuity reinforced via prompt
+    // language in build-illustration-prompt.ts, not via additional image refs.
     (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { images: [{ url: "https://fal.ai/page2.png", content_type: "image/png" }] },
     });
@@ -123,7 +123,7 @@ describe("generateBodyIllustration", () => {
       positivePrompt: "scene 2",
       negativePrompt: "no flat",
       coverImageUrl: "https://example.com/cover.png",
-      customerPhotoUrl: "https://example.com/photo.jpg",
+      customerPhotoUrls: ["https://example.com/photo.jpg"],
     });
 
     const lastCall = (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1)!;
@@ -153,7 +153,7 @@ describe("generateAllIllustrations (orchestrator)", () => {
         positivePrompt: `page ${i + 1}`,
         negativePrompt: "no flat",
       })),
-      customerPhotoUrl: null,
+      customerPhotoUrls: [],
     });
 
     expect(result.cover.url).toBeTruthy();

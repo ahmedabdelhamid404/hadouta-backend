@@ -103,5 +103,31 @@ For each entry above, decide whether it appears in the story (read the user mess
 
 ## Output
 
-Produce the Bible JSON object matching the bibleSchema. Every field must be filled. supportingCharacters and secondaryLocations should be EMPTY ARRAYS for MVP.`;
+Produce the Bible JSON object matching the bibleSchema. **CRITICAL — your output MUST contain ALL FOUR of these top-level keys**, in this exact structure:
+
+\`\`\`
+{
+  "characterBible": {
+    "mainChild": { name, age, gender, appearance: { hair, skin, eyes, distinguishing }, outfit: { default, variations: [] }, personalityVisual },
+    "supportingCharacters": []
+  },
+  "settingBible": {
+    "primaryLocation": "...",
+    "primaryLocationDetails": "...",
+    "secondaryLocations": []
+  },
+  "styleBible": {
+    "medium": "...",
+    "palette": "...",
+    "light": "...",
+    "negativeStyle": "...",
+    "compositionAnchors": "..."
+  },
+  "culturalNotes": ["...", "..."]
+}
+\`\`\`
+
+Do NOT omit \`styleBible\`. Do NOT omit \`culturalNotes\`. Do NOT put \`secondaryLocations\` at the top level — it nests INSIDE \`settingBible\`. \`supportingCharacters\` and \`secondaryLocations\` should be EMPTY ARRAYS for MVP, but the keys themselves MUST be present. \`culturalNotes\` is also at the TOP LEVEL (not inside any other block) and is an array of strings — include at least one entry naming the most relevant cultural anchor for the story (e.g. "During Eid el-Fitr — kahk biscuits on table, NOT chocolate chip cookies").
+
+Every field must be filled with substantive content (no empty strings, no placeholders). settingBible.primaryLocationDetails should be ≥50 characters of specific visual detail.`;
 }
