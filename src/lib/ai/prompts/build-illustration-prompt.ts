@@ -1,0 +1,95 @@
+// Deterministically assembles a per-page illustration prompt from
+// Bible + scene. The Bible owns character/setting/style/cultural anchors;
+// the scene addendum says "what's unique on this page."
+//
+// This function is the bridge between the structured Bible and the text
+// prompt the image model expects. Pure function — no AI calls.
+//
+// Per docs/design/specs/2026-05-03-illustration-pipeline-redesign-spec.md §5.4.
+
+import type { Bible } from "../schemas/bible.js";
+
+export interface BuildIllustrationPromptArgs {
+  bible: Bible;
+  scene: string;
+  /** 0 = cover; 1..N = body pages. Used to apply outfit variations. */
+  pageNumber: number;
+}
+
+export interface IllustrationPrompt {
+  positive: string;
+  negative: string;
+}
+
+export function buildIllustrationPrompt(
+  args: BuildIllustrationPromptArgs,
+): IllustrationPrompt {
+  const { bible, scene, pageNumber } = args;
+
+  // Character block — locked appearance.
+  const child = bible.characterBible.mainChild;
+  const outfit = resolveOutfit(child.outfit, pageNumber);
+  const characterParts: (string | null)[] = [
+    `Egyptian ${child.gender}, ${child.age} years old`,
+    `hair: ${child.appearance.hair}`,
+    `skin: ${child.appearance.skin}`,
+    `eyes: ${child.appearance.eyes}`,
+    child.appearance.distinguishing
+      ? `distinguishing features: ${child.appearance.distinguishing}`
+      : null,
+    `wearing ${outfit}`,
+    `personality cues: ${child.personalityVisual}`,
+  ];
+  const characterBlock = characterParts.filter(Boolean).join(", ");
+
+  // Setting block.
+  const settingBlock = [
+    `setting: ${bible.settingBible.primaryLocation}`,
+    bible.settingBible.primaryLocationDetails,
+  ].join(" — ");
+
+  // Style block.
+  const styleBlock = [
+    bible.styleBible.medium,
+    `palette: ${bible.styleBible.palette}`,
+    `light: ${bible.styleBible.light}`,
+  ].join(", ");
+
+  // Cultural notes.
+  const cultureBlock =
+    bible.culturalNotes.length > 0
+      ? `Cultural anchors (CRITICAL — render exactly as described): ${bible.culturalNotes.join(". ")}.`
+      : "";
+
+  // Composition anchors apply per page.
+  const compositionBlock = `composition: ${bible.styleBible.compositionAnchors}`;
+
+  const positive = [
+    styleBlock,
+    characterBlock,
+    settingBlock,
+    `scene: ${scene}`,
+    cultureBlock,
+    compositionBlock,
+  ]
+    .filter((s) => s && s.length > 0)
+    .join(". ");
+
+  return {
+    positive,
+    negative: bible.styleBible.negativeStyle,
+  };
+}
+
+function resolveOutfit(
+  outfit: Bible["characterBible"]["mainChild"]["outfit"],
+  pageNumber: number,
+): string {
+  if (pageNumber === 0) return outfit.default;
+  for (const variation of outfit.variations) {
+    if (variation.pageNumbers.includes(pageNumber)) {
+      return variation.description;
+    }
+  }
+  return outfit.default;
+}
