@@ -1,29 +1,38 @@
-// Illustration generator — uses Google's @google/genai SDK directly to call
-// gemini-2.5-flash-image (Nano Banana). Per session 9.5 lock: Ahmed has a
-// Google Pro account with billing enabled, so we go direct rather than
-// through fal.ai for the dev path.
+// Illustration generator — Flux 1.1 Pro via Fal.ai (replaces Gemini 2.5 Flash Image
+// per docs/design/specs/2026-05-03-illustration-pipeline-redesign-spec.md §5.5).
 //
-// Returned bytes are uploaded to Cloudinary so we own the hosting (and can
-// apply transformations + serve to the customer's WhatsApp message later).
+// Pipeline:
+//   - Cover: Flux only (no reference yet) via fal-ai/flux-pro/v1.1.
+//   - Body pages: Flux + optional PuLID (face injection from customer photo)
+//                 + reference_image_url = generated cover URL (Edit-based pipeline).
+//                 [body path implemented in Task 10]
 //
-// fal.ai + OpenAI Image fallbacks are deliberately NOT in v1 — admin can
-// flip ai_settings.illustrationModel later, but the routing is dev-mode
-// Google-only for now per ADR-020 cost-minimizing defaults.
+// All uploads to Cloudinary as before (preserve existing storage path and
+// folder convention for backward compatibility with admin UI image lookups).
 
-import { GoogleGenAI, Modality } from "@google/genai";
-import { eq } from "drizzle-orm";
-import { db } from "../../db/index.js";
-import { aiSettings } from "../../db/schema.js";
+import { fal } from "@fal-ai/client";
 import { uploadImage } from "../cloudinary.js";
 
-interface GenerateIllustrationInput {
-  prompt: string;
-  orderId: string;
-  // 0 for cover, 1..N for body pages. Used in Cloudinary folder naming.
-  pageNumber: number;
+const FLUX_PRO_ENDPOINT = "fal-ai/flux-pro/v1.1";
+
+let _falConfigured = false;
+function ensureFalConfigured(): void {
+  if (_falConfigured) return;
+  const key = process.env.FAL_KEY;
+  if (!key) {
+    throw new Error("FAL_KEY not set — cannot generate illustrations.");
+  }
+  fal.config({ credentials: key });
+  _falConfigured = true;
 }
 
-interface GenerateIllustrationResult {
+export interface CoverInput {
+  orderId: string;
+  positivePrompt: string;
+  negativePrompt: string;
+}
+
+export interface IllustrationResult {
   url: string;
   contentType: string;
   fileSize: number;
@@ -31,86 +40,85 @@ interface GenerateIllustrationResult {
   durationMs: number;
 }
 
-let _client: GoogleGenAI | null = null;
-
-function getGoogleClient(): GoogleGenAI {
-  if (_client) return _client;
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "GOOGLE_AI_API_KEY not set — cannot generate illustrations.",
-    );
-  }
-  _client = new GoogleGenAI({ apiKey });
-  return _client;
-}
-
-export async function generateIllustration(
-  input: GenerateIllustrationInput,
-): Promise<GenerateIllustrationResult> {
-  const settings = await loadAiSettings();
-  const modelId = settings.illustrationModel;
-
-  if (!modelId.startsWith("gemini-")) {
-    throw new Error(
-      `illustrationModel "${modelId}" not supported by this generator (Google direct only). Set ai_settings.illustration_model to a gemini-* model.`,
-    );
-  }
-
-  const client = getGoogleClient();
-
+export async function generateCoverIllustration(
+  input: CoverInput,
+): Promise<IllustrationResult> {
+  ensureFalConfigured();
   const startedAt = Date.now();
-  const response = await client.models.generateContent({
-    model: modelId,
-    contents: input.prompt,
-    config: {
-      responseModalities: [Modality.IMAGE],
-    },
-  });
-  const durationMs = Date.now() - startedAt;
 
-  const base64Data = extractInlineImageBase64(response);
-  if (!base64Data) {
+  // Flux 1.1 Pro (cover endpoint) is text-only — no native negative_prompt
+  // field. Embed negatives into the positive prompt as natural-language
+  // constraints, which Flux models honor reasonably well. (Body pages use
+  // Redux / PuLID endpoints that DO accept native negative_prompt.)
+  const promptWithNegatives = input.negativePrompt
+    ? `${input.positivePrompt}. Avoid: ${input.negativePrompt}.`
+    : input.positivePrompt;
+
+  const result = await fal.subscribe(FLUX_PRO_ENDPOINT, {
+    input: {
+      prompt: promptWithNegatives,
+      image_size: "portrait_4_3",
+      output_format: "png",
+      safety_tolerance: "2",
+    },
+    logs: false,
+  });
+
+  const durationMs = Date.now() - startedAt;
+  const image = (result as { data?: { images?: Array<{ url?: string; content_type?: string }> } })
+    .data?.images?.[0];
+  if (!image?.url) {
     throw new Error(
-      `Gemini did not return image data for page ${input.pageNumber}. Response shape: ${summarizeResponse(response)}`,
+      `Flux returned no image for cover. Response: ${JSON.stringify(result.data ?? null).slice(0, 500)}`,
     );
   }
 
-  const buffer = Buffer.from(base64Data, "base64");
-  const ownerType =
-    input.pageNumber === 0
-      ? "illustration_cover"
-      : `illustration_page_${input.pageNumber}`;
-  const upload = await uploadImage(
+  // Download Fal.ai's CDN URL and re-upload to Cloudinary so we own the
+  // hosting (and so admin UI image lookups continue to work via the existing
+  // hadouta/orders/<orderId>/illustration_<owner> folder convention).
+  const buffer = await downloadAsBuffer(image.url);
+  const uploaded = await uploadImage(
     buffer,
     input.orderId,
-    ownerType,
-    "image/png",
+    "illustration_cover",
+    image.content_type ?? "image/png",
   );
 
   return {
-    url: upload.url,
-    contentType: upload.contentType,
-    fileSize: upload.fileSize,
-    modelId,
+    url: uploaded.url,
+    contentType: uploaded.contentType,
+    fileSize: uploaded.fileSize,
+    modelId: "flux-pro-1.1",
     durationMs,
   };
 }
 
-// Generate cover + all body pages with bounded concurrency. Google's free-tier
-// + early-paid quota is rate-limited; running all 9 in parallel can trigger
-// 429s. Concurrency 3 keeps us safely under quota without being painfully slow.
-const ILLUSTRATION_CONCURRENCY = 3;
-
-interface BatchInput {
-  orderId: string;
-  cover: { prompt: string };
-  pages: Array<{ pageNumber: number; prompt: string }>;
+async function downloadAsBuffer(url: string): Promise<Buffer> {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to download generated image: ${res.status}`);
+  }
+  return Buffer.from(await res.arrayBuffer());
 }
 
-interface BatchResult {
-  cover: GenerateIllustrationResult;
-  pages: Array<GenerateIllustrationResult & { pageNumber: number }>;
+// === Legacy batch shape — kept temporarily so the orchestrator keeps
+// compiling between Tasks 9–10. Task 11 rewrites the orchestrator to use
+// the new Bible-driven shape and removes this shim. ===
+
+export interface BatchInput {
+  orderId: string;
+  cover: { positivePrompt: string; negativePrompt: string };
+  pages: Array<{
+    pageNumber: number;
+    positivePrompt: string;
+    negativePrompt: string;
+  }>;
+  customerPhotoUrl: string | null;
+}
+
+export interface BatchResult {
+  cover: IllustrationResult;
+  pages: Array<IllustrationResult & { pageNumber: number }>;
   totalDurationMs: number;
 }
 
@@ -118,26 +126,17 @@ export async function generateAllIllustrations(
   input: BatchInput,
 ): Promise<BatchResult> {
   const startedAt = Date.now();
-
-  // Cover first (its prompt is the most important and we want it cached/tested
-  // independently if something fails downstream).
-  const cover = await generateIllustration({
-    prompt: input.cover.prompt,
+  const cover = await generateCoverIllustration({
     orderId: input.orderId,
-    pageNumber: 0,
+    positivePrompt: input.cover.positivePrompt,
+    negativePrompt: input.cover.negativePrompt,
   });
 
-  const pages = await runWithConcurrency(
-    input.pages,
-    ILLUSTRATION_CONCURRENCY,
-    async (page) => {
-      const result = await generateIllustration({
-        prompt: page.prompt,
-        orderId: input.orderId,
-        pageNumber: page.pageNumber,
-      });
-      return { ...result, pageNumber: page.pageNumber };
-    },
+  // Body pages — stub returning cover for every page until Task 10 implements
+  // generateBodyIllustration with PuLID/reference handling. Lets typecheck +
+  // existing flows compile. The stub is exercised end-to-end only after Task 10.
+  const pages: Array<IllustrationResult & { pageNumber: number }> = input.pages.map(
+    (p) => ({ ...cover, pageNumber: p.pageNumber }),
   );
 
   return {
@@ -145,65 +144,4 @@ export async function generateAllIllustrations(
     pages,
     totalDurationMs: Date.now() - startedAt,
   };
-}
-
-async function runWithConcurrency<T, U>(
-  items: T[],
-  concurrency: number,
-  fn: (item: T) => Promise<U>,
-): Promise<U[]> {
-  const results: U[] = new Array(items.length);
-  let cursor = 0;
-  async function worker() {
-    while (true) {
-      const i = cursor++;
-      if (i >= items.length) return;
-      results[i] = await fn(items[i]!);
-    }
-  }
-  const workers = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    () => worker(),
-  );
-  await Promise.all(workers);
-  return results;
-}
-
-async function loadAiSettings() {
-  const rows = await db
-    .select()
-    .from(aiSettings)
-    .where(eq(aiSettings.id, "singleton"))
-    .limit(1);
-  const row = rows[0];
-  if (!row) {
-    throw new Error(
-      "ai_settings singleton row missing. Run `pnpm db:seed:ai-settings`.",
-    );
-  }
-  return row;
-}
-
-// Defensive extraction — Gemini responses can include text + image parts;
-// we want the first inlineData (image) part regardless of position.
-function extractInlineImageBase64(response: {
-  candidates?: Array<{
-    content?: { parts?: Array<{ inlineData?: { data?: string } }> };
-  }>;
-}): string | null {
-  const candidate = response.candidates?.[0];
-  const parts = candidate?.content?.parts ?? [];
-  for (const part of parts) {
-    const data = part.inlineData?.data;
-    if (data) return data;
-  }
-  return null;
-}
-
-function summarizeResponse(response: unknown): string {
-  try {
-    return JSON.stringify(response).slice(0, 500);
-  } catch {
-    return "(unserializable)";
-  }
 }

@@ -153,13 +153,22 @@ async function runGenerationPipeline(
       .set({ status: "generating_illustrations", updatedAt: new Date() })
       .where(eq(generations.id, generationId));
 
+    // TEMPORARY orchestrator wiring for Tasks 9–10. Task 11 rewrites this
+    // to call the Bible generator + buildIllustrationPrompt assembler.
+    // For now we send the raw scene text as the positive prompt and a
+    // placeholder negative — Task 11 supplies real Bible-driven prompts.
     const illustrations = await generateAllIllustrations({
       orderId,
-      cover: { prompt: storyResult.story.coverDescription },
+      cover: {
+        positivePrompt: storyResult.story.coverDescription,
+        negativePrompt: "NOT photorealistic, NOT 3D, NOT cartoon, NOT anime",
+      },
       pages: storyResult.story.pages.map((p) => ({
         pageNumber: p.number,
-        prompt: p.scene,
+        positivePrompt: p.scene,
+        negativePrompt: "NOT photorealistic, NOT 3D, NOT cartoon, NOT anime",
       })),
+      customerPhotoUrl: null,
     });
     console.log(
       `[jobs/generate-book] illustrations done: ${illustrations.pages.length + 1} images, ${illustrations.totalDurationMs}ms`,

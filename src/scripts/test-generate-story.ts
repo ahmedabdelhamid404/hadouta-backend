@@ -174,11 +174,16 @@ async function main() {
     console.log("\n=== Running illustration generator (cover + body pages) ===");
     const illustrations = await generateAllIllustrations({
       orderId,
-      cover: { prompt: result.story.coverDescription },
+      cover: {
+        positivePrompt: result.story.coverDescription,
+        negativePrompt: "NOT photorealistic, NOT 3D, NOT cartoon, NOT anime",
+      },
       pages: result.story.pages.map((p) => ({
         pageNumber: p.number,
-        prompt: p.scene,
+        positivePrompt: p.scene,
+        negativePrompt: "NOT photorealistic, NOT 3D, NOT cartoon, NOT anime",
       })),
+      customerPhotoUrl: null,
     });
 
     console.log(

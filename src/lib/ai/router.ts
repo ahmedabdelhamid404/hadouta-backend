@@ -83,3 +83,20 @@ export function estimateCostCents(args: {
   // Convert dollars → cents, round to nearest cent.
   return Math.round((inputCost + outputCost) * 100);
 }
+
+// === Image-model cost helpers ===
+// Image generators bill per image, not per token. Tracked separately so admin
+// queue can sum text-token costs + image costs and present a per-book total.
+// Per docs/design/specs/2026-05-03-illustration-pipeline-redesign-spec.md §8.
+const IMAGE_COST_CENTS_PER_CALL: Record<string, number> = {
+  "flux-pro-1.1": 4, // $0.04 per image
+  "flux-pulid": 6, // ~$0.04 base + ~$0.02 PuLID overhead per image
+};
+
+export function isFluxModel(modelId: string): boolean {
+  return modelId.startsWith("flux-");
+}
+
+export function getImageCostCents(modelId: string): number {
+  return IMAGE_COST_CENTS_PER_CALL[modelId] ?? 0;
+}

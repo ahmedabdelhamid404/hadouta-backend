@@ -11,7 +11,7 @@ import "dotenv/config";
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { generations, bookPages } from "../db/schema.js";
-import { generateIllustration } from "../lib/ai/illustration-generator.js";
+import { generateCoverIllustration } from "../lib/ai/illustration-generator.js";
 
 interface CliArgs {
   generationId: string | null;
@@ -81,11 +81,14 @@ async function main() {
   console.log("\nPrompt:");
   console.log(`  ${prompt}\n`);
 
-  console.log("=== Calling Gemini 2.5 Flash Image ===");
-  const result = await generateIllustration({
-    prompt,
+  // Post-Task 9: this manual script only supports single-image generation
+  // via the cover endpoint (no PuLID, no reference). Body-page testing flows
+  // through the full pipeline in Task 11+ orchestration.
+  console.log("=== Calling Flux 1.1 Pro via Fal.ai ===");
+  const result = await generateCoverIllustration({
     orderId: gen.orderId,
-    pageNumber: cli.page,
+    positivePrompt: prompt,
+    negativePrompt: "NOT photorealistic, NOT 3D, NOT cartoon, NOT anime",
   });
 
   console.log(`\n✓ Generated in ${result.durationMs}ms`);
