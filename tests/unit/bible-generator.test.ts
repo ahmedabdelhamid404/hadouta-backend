@@ -125,3 +125,32 @@ describe("generateBible — no photo (persona path)", () => {
     ).rejects.toThrow(/persona|photo|description/i);
   });
 });
+
+describe("generateBible — photo path", () => {
+  it("calls vision describer to describe the photo before generating Bible", async () => {
+    (generateObject as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      object: VALID_BIBLE_FIXTURE,
+      usage: { promptTokens: 1500, completionTokens: 800 },
+    });
+
+    const visionMock = vi.fn().mockResolvedValue({
+      text: "wavy dark hair just past shoulders, simple front fringe, warm fair olive skin, almond-shaped honey-brown eyes, single dimple on right cheek, calm composed expression",
+    });
+
+    const bible = await generateBible(
+      {
+        ...SAMPLE_INPUT,
+        wizardData: {
+          ...SAMPLE_INPUT.wizardData,
+          personaId: null,
+          photoUrl: "https://res.cloudinary.com/example/child.jpg",
+        },
+      },
+      { _visionCallOverride: visionMock },
+    );
+
+    expect(visionMock).toHaveBeenCalledTimes(1);
+    expect(visionMock).toHaveBeenCalledWith("https://res.cloudinary.com/example/child.jpg");
+    expect(bible).toBeDefined();
+  });
+});

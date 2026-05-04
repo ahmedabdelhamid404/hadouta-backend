@@ -4,7 +4,8 @@
 //
 // Per docs/design/specs/2026-05-03-illustration-pipeline-redesign-spec.md §5.
 
-import { generateObject } from "ai";
+import { generateObject, generateText } from "ai";
+import type { LanguageModelV1 } from "ai";
 import { resolveTextModel } from "./router.js";
 import { bibleSchema, type Bible } from "./schemas/bible.js";
 import { buildBibleSystemPrompt } from "./prompts/bible-system-prompt.js";
@@ -40,6 +41,36 @@ export interface BibleGeneratorInternalOptions {
   _visionCallOverride?: (photoUrl: string) => Promise<{ text: string }>;
 }
 
+/**
+ * Calls a vision-capable model (gpt-4o or similar) to extract identity-anchoring
+ * facts from a customer-uploaded child photo. Returns 1-3 sentences in English
+ * describing hair, skin, eyes, distinguishing features — no background, no
+ * personality speculation, no name. The result feeds the Bible's mainChild
+ * appearance block.
+ */
+async function describePhoto(
+  photoUrl: string,
+  model: LanguageModelV1,
+): Promise<string> {
+  const result = await generateText({
+    model,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "Describe the child in this photo for a children's book illustrator. Focus on: hair (color, type, length, style), skin tone, eye color/shape, distinguishing features (dimples, freckles, glasses, gap teeth, etc.). Do NOT include the background or the photographer's intent. Output 1–3 sentences in ENGLISH only. Do NOT include the child's name. Do NOT speculate about emotion or personality. Just visual facts that anchor identity across illustrated scenes.",
+          },
+          { type: "image", image: photoUrl },
+        ],
+      },
+    ],
+    temperature: 0.2,
+  });
+  return result.text.trim();
+}
+
 export async function generateBible(
   input: GenerateBibleInput,
   internal: BibleGeneratorInternalOptions = {},
@@ -59,11 +90,13 @@ export async function generateBible(
   const modelId = input.modelId ?? "gpt-4o-mini";
   const resolved = resolveTextModel(modelId);
 
-  // Vision path is wired in Task 7; for now, only honor a pre-supplied
-  // photoDescription or the test-override.
+  // If photoUrl set and no pre-supplied description, call vision model.
+  // Test-override takes precedence so unit tests don't hit a real provider.
   let photoDescription = wizardData.photoDescription ?? null;
-  if (wizardData.photoUrl && !photoDescription && internal._visionCallOverride) {
-    photoDescription = (await internal._visionCallOverride(wizardData.photoUrl)).text;
+  if (wizardData.photoUrl && !photoDescription) {
+    photoDescription = internal._visionCallOverride
+      ? (await internal._visionCallOverride(wizardData.photoUrl)).text
+      : await describePhoto(wizardData.photoUrl, resolved.model);
   }
 
   const persona = wizardData.personaId
