@@ -103,7 +103,7 @@ export async function kickoffGenerationIfNeeded(
  * Catches all errors, persists status='failed' + errorLog so the admin sees
  * what happened.
  */
-async function runGenerationPipeline(
+export async function runGenerationPipeline(
   generationId: string,
   orderId: string,
 ): Promise<void> {

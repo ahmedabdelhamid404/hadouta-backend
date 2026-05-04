@@ -217,4 +217,74 @@ adminGenerationsRouter.post("/:id/reject", async (c) => {
   return c.json({ ok: true, generationId: id, status: "rejected" });
 });
 
+// POST /api/admin/generations/:id/reroll — body: { scope: "illustrations" | "bible" | "story" }
+//
+// Per docs/design/specs/2026-05-03-illustration-pipeline-redesign-spec.md §5.7:
+//   - illustrations: keep storyJson + bibleJson, clear pages, re-run from
+//                    Step 3 (illustration prompt assembly + Fal.ai)
+//   - bible:         keep storyJson, clear bibleJson + pages, re-run from
+//                    Step 2 (Bible generation)
+//   - story:         clear everything, re-run the full pipeline from Step 1
+adminGenerationsRouter.post("/:id/reroll", async (c) => {
+  const id = c.req.param("id");
+
+  type RerollScope = "illustrations" | "bible" | "story";
+  const VALID_SCOPES: readonly RerollScope[] = [
+    "illustrations",
+    "bible",
+    "story",
+  ];
+
+  let body: { scope?: string };
+  try {
+    body = (await c.req.json()) as typeof body;
+  } catch {
+    return c.json({ error: "JSON body required" }, 400);
+  }
+  const scope = body.scope as RerollScope | undefined;
+  if (!scope || !VALID_SCOPES.includes(scope)) {
+    return c.json(
+      { error: `scope must be one of: ${VALID_SCOPES.join(", ")}` },
+      400,
+    );
+  }
+
+  const genRows = await db
+    .select({ id: generations.id, orderId: generations.orderId })
+    .from(generations)
+    .where(eq(generations.id, id))
+    .limit(1);
+  const gen = genRows[0];
+  if (!gen) return c.json({ error: "generation not found" }, 404);
+
+  // Reset based on scope. Always clear book_pages so they regenerate.
+  // status='queued' so the orchestrator picks it up like a fresh kickoff.
+  const updates: Partial<typeof generations.$inferInsert> = {
+    status: "queued",
+    updatedAt: new Date(),
+    rejectionCategory: null,
+    rejectionReason: null,
+    errorLog: null,
+  };
+  if (scope === "bible" || scope === "story") {
+    updates.bibleJson = null;
+    updates.bibleRegeneratedAt = null;
+  }
+  if (scope === "story") {
+    updates.storyJson = null;
+  }
+
+  await db.delete(bookPages).where(eq(bookPages.generationId, id));
+  await db.update(generations).set(updates).where(eq(generations.id, id));
+
+  // Re-trigger the orchestrator (fire-and-forget). Lazy import keeps this
+  // route module from depending on the jobs layer at module-load time.
+  const { runGenerationPipeline } = await import("../jobs/generate-book.js");
+  void runGenerationPipeline(gen.id, gen.orderId).catch((err: unknown) => {
+    console.error(`[admin/reroll] pipeline failed for ${gen.id}:`, err);
+  });
+
+  return c.json({ ok: true, generationId: id, scope, status: "queued" });
+});
+
 export { adminGenerationsRouter };
