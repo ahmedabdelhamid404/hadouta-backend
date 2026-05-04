@@ -124,6 +124,11 @@ export async function assembleBookPdf(
           resource_type: "raw",
           public_id: `book-${opts.generationId}.pdf`,
           overwrite: true,
+          // Defense-in-depth: explicitly mark public. Cloudinary's account-level
+          // "Restricted media types" setting still gates delivery (toggle PDF off
+          // in Settings → Security in the dashboard), but `access_mode: "public"`
+          // ensures the per-asset access mode is correct.
+          access_mode: "public",
         },
         (error, uploaded) => {
           if (error || !uploaded) {
