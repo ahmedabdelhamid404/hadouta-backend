@@ -108,3 +108,25 @@ function resolveOutfit(
   }
   return outfit.default;
 }
+
+const PIXAR_STYLE_ANCHOR =
+  "Render in Pixar 3D animated style — soft volumetric lighting, " +
+  "expressive facial features, warm cinematic color grading, smooth " +
+  "subsurface scattering on skin, in the visual register of Disney " +
+  "Encanto / Coco / Inside Out. Maintain Egyptian cultural specificity " +
+  "in costuming, setting, and props as described above.";
+
+/**
+ * Append Pixar-3D style anchor language to a prompt string.
+ *
+ * Used by the `flux-kontext-pixar` illustration provider to overlay a
+ * concrete style register on top of the Bible-driven prompt. The Bible
+ * itself stays unchanged on disk — the override happens at prompt-assembly
+ * time so we don't need to regenerate persisted Bibles for Phase 1.
+ *
+ * Idempotent: if the anchor is already present, returns the prompt unchanged.
+ */
+export function appendPixarStyleAnchor(prompt: string): string {
+  if (prompt.includes("Pixar 3D animated style")) return prompt;
+  return `${prompt}. ${PIXAR_STYLE_ANCHOR}`;
+}

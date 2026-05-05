@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildIllustrationPrompt } from "../../src/lib/ai/prompts/build-illustration-prompt.js";
+import {
+  appendPixarStyleAnchor,
+  buildIllustrationPrompt,
+} from "../../src/lib/ai/prompts/build-illustration-prompt.js";
 import type { Bible } from "../../src/lib/ai/schemas/bible.js";
 
 const SAMPLE_BIBLE: Bible = {
@@ -148,5 +151,22 @@ describe("buildIllustrationPrompt", () => {
       pageNumber: 0,
     });
     expect(positive).toContain("yellow cotton sundress");
+  });
+});
+
+describe("appendPixarStyleAnchor", () => {
+  it("appends Pixar-3D style language to a prompt", () => {
+    const original = "watercolor scene of an Egyptian girl";
+    const result = appendPixarStyleAnchor(original);
+    expect(result).toContain(original);
+    expect(result).toContain("Pixar 3D animated style");
+    expect(result).toContain("subsurface scattering");
+  });
+
+  it("does not duplicate the anchor if already present", () => {
+    const already = appendPixarStyleAnchor("base prompt");
+    const twice = appendPixarStyleAnchor(already);
+    const occurrences = (twice.match(/Pixar 3D animated style/g) ?? []).length;
+    expect(occurrences).toBe(1);
   });
 });
