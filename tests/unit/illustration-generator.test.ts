@@ -135,6 +135,110 @@ describe("generateBodyIllustration", () => {
   });
 });
 
+describe("generateCoverIllustration with provider=flux-kontext-pixar", () => {
+  beforeEach(() => {
+    process.env.PIXAR_STYLE_LORA_URL =
+      "https://example.com/test-pixar-lora.safetensors";
+  });
+
+  it("calls fal-ai/flux-pro/kontext/multi with image_urls + loras", async () => {
+    (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        images: [{ url: "https://fal.ai/example.png", content_type: "image/png" }],
+      },
+    });
+
+    const result = await generateCoverIllustration({
+      orderId: "order-123",
+      positivePrompt: "Egyptian girl in Cairo school courtyard",
+      negativePrompt: "NOT photorealistic",
+      customerPhotoUrls: [
+        "https://res.cloudinary.com/test/photo1.jpg",
+        "https://res.cloudinary.com/test/photo2.jpg",
+      ],
+      provider: "flux-kontext-pixar",
+    });
+
+    expect(fal.subscribe).toHaveBeenCalledWith(
+      "fal-ai/flux-pro/kontext/multi",
+      expect.objectContaining({
+        input: expect.objectContaining({
+          prompt: expect.stringContaining("Pixar 3D animated style"),
+          image_urls: [
+            "https://res.cloudinary.com/test/photo1.jpg",
+            "https://res.cloudinary.com/test/photo2.jpg",
+          ],
+          loras: expect.arrayContaining([
+            expect.objectContaining({
+              path: "https://example.com/test-pixar-lora.safetensors",
+            }),
+          ]),
+        }),
+      }),
+    );
+    expect(result.modelId).toBe("flux-kontext-pixar");
+  });
+
+  it("falls back to existing nano-banana path when provider omitted", async () => {
+    (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        images: [{ url: "https://fal.ai/example.png", content_type: "image/png" }],
+      },
+    });
+    await generateCoverIllustration({
+      orderId: "order-123",
+      positivePrompt: "watercolor scene",
+      negativePrompt: "NOT 3D",
+      customerPhotoUrls: ["https://res.cloudinary.com/test/photo1.jpg"],
+    });
+    expect(fal.subscribe).toHaveBeenCalledWith(
+      "fal-ai/nano-banana-pro/edit",
+      expect.any(Object),
+    );
+  });
+});
+
+describe("generateBodyIllustration with provider=flux-kontext-pixar", () => {
+  beforeEach(() => {
+    process.env.PIXAR_STYLE_LORA_URL =
+      "https://example.com/test-pixar-lora.safetensors";
+  });
+
+  it("calls fal-ai/flux-pro/kontext/multi with image_urls + loras", async () => {
+    (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        images: [{ url: "https://fal.ai/page.png", content_type: "image/png" }],
+      },
+    });
+
+    const result = await generateBodyIllustration({
+      orderId: "order-123",
+      pageNumber: 1,
+      positivePrompt: "Egyptian girl walking to school",
+      negativePrompt: "NOT photorealistic",
+      coverImageUrl: "https://res.cloudinary.com/test/cover.png",
+      customerPhotoUrls: [
+        "https://res.cloudinary.com/test/photo1.jpg",
+        "https://res.cloudinary.com/test/photo2.jpg",
+      ],
+      provider: "flux-kontext-pixar",
+    });
+
+    const call = (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mock
+      .calls.at(-1)!;
+    expect(call[0]).toBe("fal-ai/flux-pro/kontext/multi");
+    expect(call[1].input.prompt).toContain("Pixar 3D animated style");
+    expect(call[1].input.image_urls).toEqual([
+      "https://res.cloudinary.com/test/photo1.jpg",
+      "https://res.cloudinary.com/test/photo2.jpg",
+    ]);
+    expect(call[1].input.loras[0].path).toBe(
+      "https://example.com/test-pixar-lora.safetensors",
+    );
+    expect(result.modelId).toBe("flux-kontext-pixar");
+  });
+});
+
 describe("generateAllIllustrations (orchestrator)", () => {
   it("generates cover first, then bodies", async () => {
     let callCount = 0;

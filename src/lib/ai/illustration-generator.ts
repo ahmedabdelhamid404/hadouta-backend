@@ -12,6 +12,11 @@
 
 import { fal } from "@fal-ai/client";
 import { uploadImage } from "../cloudinary.js";
+import { appendPixarStyleAnchor } from "./prompts/build-illustration-prompt.js";
+
+const FLUX_KONTEXT_MULTI = "fal-ai/flux-pro/kontext/multi";
+
+export type IllustrationProvider = "nano-banana" | "flux-kontext-pixar";
 
 // Pivot to Nano Banana (Gemini 2.5 Flash Image) per Phase H iteration 3 (2026-05-05):
 // 3 iterations of Flux+PuLID tuning showed PuLID's portrait-only ceiling can't
@@ -80,6 +85,8 @@ export interface CoverInput {
   negativePrompt: string;
   /** Optional — when set (1-3 photos), used as reference images so cover reflects the actual child. */
   customerPhotoUrls?: string[];
+  /** Provider selector — default 'nano-banana'. 'flux-kontext-pixar' uses Flux Kontext Multi + Pixar style LoRA. */
+  provider?: IllustrationProvider;
 }
 
 export interface IllustrationResult {
@@ -90,70 +97,150 @@ export interface IllustrationResult {
   durationMs: number;
 }
 
+/**
+ * Phase 1 (2026-05-05) — Flux Kontext Multi + Pixar-3D Style LoRA.
+ *
+ * Used when ai_settings.illustration_model = 'flux-kontext-pixar'.
+ * Falls back to plain `fal-ai/flux-pro/kontext/multi` (no LoRA) if
+ * PIXAR_STYLE_LORA_URL is not set in env (per spec §4.5 Fallback A).
+ */
+async function callFluxKontextPixar(args: {
+  positivePrompt: string;
+  negativePrompt: string;
+  imageUrls: string[];
+}): Promise<{
+  url: string;
+  contentType: string;
+}> {
+  const enrichedPrompt = appendPixarStyleAnchor(args.positivePrompt);
+  const promptWithNegatives = args.negativePrompt
+    ? `${enrichedPrompt}. Avoid: ${args.negativePrompt}.`
+    : enrichedPrompt;
+
+  const loraUrl = process.env.PIXAR_STYLE_LORA_URL;
+  const loras = loraUrl ? [{ path: loraUrl, scale: 0.85 }] : undefined;
+
+  // The fal.ai SDK's `FluxKontextMultiInput` type doesn't include `loras` yet
+  // even though the runtime accepts it (Task 0 verified empirically on
+  // 2026-05-05 — see src/scripts/verify-fal-kontext-lora.ts). Build the input
+  // object with the SDK's expected fields, then attach `loras` via
+  // `Object.assign` so TS doesn't see it in the literal-typed object. DO NOT
+  // use `as any`.
+  const baseInput = {
+    prompt: promptWithNegatives,
+    image_urls: args.imageUrls,
+    aspect_ratio: "3:4" as const,
+    output_format: "png" as const,
+    num_images: 1,
+  };
+  const input = loras
+    ? Object.assign({}, baseInput, { loras })
+    : baseInput;
+
+  const result = await fal.subscribe(FLUX_KONTEXT_MULTI, {
+    input,
+    logs: false,
+  });
+
+  const image = (result as {
+    data?: { images?: Array<{ url?: string; content_type?: string }> };
+  }).data?.images?.[0];
+  if (!image?.url) {
+    throw new Error(
+      `Flux Kontext returned no image. Response: ${JSON.stringify(result.data ?? null).slice(0, 500)}`,
+    );
+  }
+  return {
+    url: image.url,
+    contentType: image.content_type ?? "image/png",
+  };
+}
+
 export async function generateCoverIllustration(
   input: CoverInput,
 ): Promise<IllustrationResult> {
   ensureFalConfigured();
   const startedAt = Date.now();
-
-  // Nano Banana doesn't accept a separate negative_prompt — fold it into the
-  // positive prompt as natural-language constraints. Gemini's instruction-
-  // following is strong enough to honor "avoid X" phrasing.
-  const promptWithNegatives = input.negativePrompt
-    ? `${input.positivePrompt}. Avoid: ${input.negativePrompt}.`
-    : input.positivePrompt;
-
-  // If customer photos provided, use the edit endpoint with ALL photos
-  // (multi-angle gives Gemini richer 3D face understanding for stronger
-  // identity preservation). Otherwise fall back to text-to-image.
+  const provider = input.provider ?? "nano-banana";
   const photoUrls = input.customerPhotoUrls ?? [];
-  let result;
-  if (photoUrls.length > 0) {
-    result = await fal.subscribe(NANO_BANANA_PRO_EDIT, {
-      input: {
-        prompt: promptWithNegatives,
-        image_urls: photoUrls,
-        aspect_ratio: "3:4",
-        output_format: "png",
-        num_images: 1,
-      },
-      logs: false,
+
+  let imageMeta: { url: string; contentType: string };
+  let modelId: string;
+
+  if (provider === "flux-kontext-pixar") {
+    if (photoUrls.length === 0) {
+      throw new Error(
+        "flux-kontext-pixar provider requires at least 1 customer photo for cover.",
+      );
+    }
+    imageMeta = await callFluxKontextPixar({
+      positivePrompt: input.positivePrompt,
+      negativePrompt: input.negativePrompt,
+      imageUrls: photoUrls,
     });
+    modelId = "flux-kontext-pixar";
   } else {
-    result = await fal.subscribe(NANO_BANANA_PRO, {
-      input: {
-        prompt: promptWithNegatives,
-        aspect_ratio: "3:4",
-        output_format: "png",
-        num_images: 1,
-      },
-      logs: false,
-    });
+    // Existing Nano Banana path — unchanged behavior.
+    // Nano Banana doesn't accept a separate negative_prompt — fold it into the
+    // positive prompt as natural-language constraints. Gemini's instruction-
+    // following is strong enough to honor "avoid X" phrasing.
+    const promptWithNegatives = input.negativePrompt
+      ? `${input.positivePrompt}. Avoid: ${input.negativePrompt}.`
+      : input.positivePrompt;
+
+    // If customer photos provided, use the edit endpoint with ALL photos
+    // (multi-angle gives Gemini richer 3D face understanding for stronger
+    // identity preservation). Otherwise fall back to text-to-image.
+    let result;
+    if (photoUrls.length > 0) {
+      result = await fal.subscribe(NANO_BANANA_PRO_EDIT, {
+        input: {
+          prompt: promptWithNegatives,
+          image_urls: photoUrls,
+          aspect_ratio: "3:4",
+          output_format: "png",
+          num_images: 1,
+        },
+        logs: false,
+      });
+    } else {
+      result = await fal.subscribe(NANO_BANANA_PRO, {
+        input: {
+          prompt: promptWithNegatives,
+          aspect_ratio: "3:4",
+          output_format: "png",
+          num_images: 1,
+        },
+        logs: false,
+      });
+    }
+
+    const image = (result as {
+      data?: { images?: Array<{ url?: string; content_type?: string }> };
+    }).data?.images?.[0];
+    if (!image?.url) {
+      throw new Error(
+        `Nano Banana returned no image for cover. Response: ${JSON.stringify(result.data ?? null).slice(0, 500)}`,
+      );
+    }
+    imageMeta = { url: image.url, contentType: image.content_type ?? "image/png" };
+    modelId = photoUrls.length > 0 ? "nano-banana-pro-edit" : "nano-banana-pro";
   }
 
-  const durationMs = Date.now() - startedAt;
-  const image = (result as { data?: { images?: Array<{ url?: string; content_type?: string }> } })
-    .data?.images?.[0];
-  if (!image?.url) {
-    throw new Error(
-      `Nano Banana returned no image for cover. Response: ${JSON.stringify(result.data ?? null).slice(0, 500)}`,
-    );
-  }
-
-  const buffer = await downloadAsBuffer(image.url);
+  const buffer = await downloadAsBuffer(imageMeta.url);
   const uploaded = await uploadImage(
     buffer,
     input.orderId,
     "illustration_cover",
-    image.content_type ?? "image/png",
+    imageMeta.contentType,
   );
 
   return {
     url: uploaded.url,
     contentType: uploaded.contentType,
     fileSize: uploaded.fileSize,
-    modelId: photoUrls.length > 0 ? "nano-banana-pro-edit" : "nano-banana-pro",
-    durationMs,
+    modelId,
+    durationMs: Date.now() - startedAt,
   };
 }
 
@@ -183,6 +270,8 @@ export interface BodyInput {
   coverImageUrl: string;
   /** 1-3 customer photos. Multi-angle uploads improve identity preservation. */
   customerPhotoUrls: string[];
+  /** Provider selector — default 'nano-banana'. 'flux-kontext-pixar' uses Flux Kontext Multi + Pixar style LoRA. */
+  provider?: IllustrationProvider;
 }
 
 export async function generateBodyIllustration(
@@ -190,54 +279,80 @@ export async function generateBodyIllustration(
 ): Promise<IllustrationResult> {
   ensureFalConfigured();
   const startedAt = Date.now();
+  const provider = input.provider ?? "nano-banana";
 
-  // Phase H iteration 8 (2026-05-05): multi-photo support. Pass ALL customer
-  // photos (typically 1-3 from wizard's photo-upload, different angles) as
-  // references — Gemini's multimodal vision builds richer 3D face geometry
-  // from multiple angles than from one. When no photos, fall back to cover
-  // (so character at least matches; better than no reference).
-  const imageUrls: string[] = input.customerPhotoUrls.length > 0
-    ? input.customerPhotoUrls
-    : [input.coverImageUrl];
-
-  const promptWithNegatives = input.negativePrompt
-    ? `${input.positivePrompt}. Avoid: ${input.negativePrompt}.`
-    : input.positivePrompt;
-
-  const result = await fal.subscribe(NANO_BANANA_PRO_EDIT, {
-    input: {
-      prompt: promptWithNegatives,
-      image_urls: imageUrls,
-      aspect_ratio: "3:4",
-      output_format: "png",
-      num_images: 1,
-    },
-    logs: false,
-  });
-
-  const durationMs = Date.now() - startedAt;
-  const image = (result as { data?: { images?: Array<{ url?: string; content_type?: string }> } })
-    .data?.images?.[0];
-  if (!image?.url) {
-    throw new Error(
-      `Nano Banana returned no image for page ${input.pageNumber}. Response: ${JSON.stringify(result.data ?? null).slice(0, 500)}`,
-    );
+  // Reference images: prefer customer photos; fall back to cover for nano-banana.
+  // For flux-kontext-pixar, multi-photo identity reference is essential — REQUIRE photos.
+  let imageUrls: string[];
+  if (provider === "flux-kontext-pixar") {
+    if (input.customerPhotoUrls.length === 0) {
+      throw new Error(
+        "flux-kontext-pixar provider requires at least 1 customer photo for body pages.",
+      );
+    }
+    imageUrls = input.customerPhotoUrls;
+  } else {
+    // Phase H iteration 8 (2026-05-05): multi-photo support. Pass ALL customer
+    // photos (typically 1-3 from wizard's photo-upload, different angles) as
+    // references — Gemini's multimodal vision builds richer 3D face geometry
+    // from multiple angles than from one. When no photos, fall back to cover
+    // (so character at least matches; better than no reference).
+    imageUrls =
+      input.customerPhotoUrls.length > 0
+        ? input.customerPhotoUrls
+        : [input.coverImageUrl];
   }
 
-  const buffer = await downloadAsBuffer(image.url);
+  let imageMeta: { url: string; contentType: string };
+  let modelId: string;
+
+  if (provider === "flux-kontext-pixar") {
+    imageMeta = await callFluxKontextPixar({
+      positivePrompt: input.positivePrompt,
+      negativePrompt: input.negativePrompt,
+      imageUrls,
+    });
+    modelId = "flux-kontext-pixar";
+  } else {
+    const promptWithNegatives = input.negativePrompt
+      ? `${input.positivePrompt}. Avoid: ${input.negativePrompt}.`
+      : input.positivePrompt;
+    const result = await fal.subscribe(NANO_BANANA_PRO_EDIT, {
+      input: {
+        prompt: promptWithNegatives,
+        image_urls: imageUrls,
+        aspect_ratio: "3:4",
+        output_format: "png",
+        num_images: 1,
+      },
+      logs: false,
+    });
+    const image = (result as {
+      data?: { images?: Array<{ url?: string; content_type?: string }> };
+    }).data?.images?.[0];
+    if (!image?.url) {
+      throw new Error(
+        `Nano Banana returned no image for page ${input.pageNumber}. Response: ${JSON.stringify(result.data ?? null).slice(0, 500)}`,
+      );
+    }
+    imageMeta = { url: image.url, contentType: image.content_type ?? "image/png" };
+    modelId = "nano-banana-pro-edit";
+  }
+
+  const buffer = await downloadAsBuffer(imageMeta.url);
   const uploaded = await uploadImage(
     buffer,
     input.orderId,
     `illustration_page_${input.pageNumber}`,
-    image.content_type ?? "image/png",
+    imageMeta.contentType,
   );
 
   return {
     url: uploaded.url,
     contentType: uploaded.contentType,
     fileSize: uploaded.fileSize,
-    modelId: "nano-banana-pro-edit",
-    durationMs,
+    modelId,
+    durationMs: Date.now() - startedAt,
   };
 }
 
@@ -259,6 +374,8 @@ export interface BatchInput {
     negativePrompt: string;
   }>;
   customerPhotoUrls: string[];
+  /** Provider for both cover + body pages. Defaults to 'nano-banana'. */
+  provider?: IllustrationProvider;
 }
 
 export interface BatchResult {
@@ -276,6 +393,7 @@ export async function generateAllIllustrations(
     positivePrompt: input.cover.positivePrompt,
     negativePrompt: input.cover.negativePrompt,
     customerPhotoUrls: input.customerPhotoUrls,
+    provider: input.provider,
   });
 
   const pages = await runWithConcurrency(input.pages, ILLUSTRATION_CONCURRENCY, async (page) => {
@@ -286,6 +404,7 @@ export async function generateAllIllustrations(
       negativePrompt: page.negativePrompt,
       coverImageUrl: cover.url,
       customerPhotoUrls: input.customerPhotoUrls,
+      provider: input.provider,
     });
     return { ...result, pageNumber: page.pageNumber };
   });
