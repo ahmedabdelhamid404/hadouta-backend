@@ -20,11 +20,15 @@ import {
   generations,
   bookPages,
   photos,
+  aiSettings,
 } from "../db/schema.js";
 import { generateStory } from "../lib/ai/story-generator.js";
 import { generateBible } from "../lib/ai/bible-generator.js";
 import { buildIllustrationPrompt } from "../lib/ai/prompts/build-illustration-prompt.js";
-import { generateAllIllustrations } from "../lib/ai/illustration-generator.js";
+import {
+  generateAllIllustrations,
+  type IllustrationProvider,
+} from "../lib/ai/illustration-generator.js";
 import { adminEvents } from "../lib/admin-events.js";
 
 const NON_TERMINAL_STATUSES = [
@@ -203,7 +207,21 @@ export async function runGenerationPipeline(
       ...buildIllustrationPrompt({ bible, scene: p.scene, pageNumber: p.number }),
     }));
 
-    // Step 4: Generate cover + body illustrations via Fal.ai (Flux + optional PuLID).
+    // Step 4: Generate cover + body illustrations.
+    // Provider is selected by the admin-controlled ai_settings.illustration_model
+    // singleton row. Only the strict value "flux-kontext-pixar" routes to the
+    // Phase 1 Pixar Kontext path; everything else (including the current
+    // default "gemini-2.5-flash-image") falls back to Nano Banana.
+    const settingsRow = await db
+      .select({ illustrationModel: aiSettings.illustrationModel })
+      .from(aiSettings)
+      .where(eq(aiSettings.id, "singleton"))
+      .limit(1);
+    const illustrationProvider: IllustrationProvider =
+      settingsRow[0]?.illustrationModel === "flux-kontext-pixar"
+        ? "flux-kontext-pixar"
+        : "nano-banana";
+
     const illustrations = await generateAllIllustrations({
       orderId,
       cover: {
@@ -216,6 +234,7 @@ export async function runGenerationPipeline(
         negativePrompt: p.negative,
       })),
       customerPhotoUrls,
+      provider: illustrationProvider,
     });
     console.log(
       `[jobs/generate-book] illustrations done: ${illustrations.pages.length + 1} images, ${illustrations.totalDurationMs}ms`,
