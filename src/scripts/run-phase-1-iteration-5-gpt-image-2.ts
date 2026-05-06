@@ -132,12 +132,16 @@ const QUALITY_BY_PAGE: Record<number, "high" | "medium"> = {
 };
 
 async function downloadPhotoToFile(url: string, dir: string, idx: number): Promise<string> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to download photo ${idx} (${url}): ${res.status}`);
-  const buf = Buffer.from(await res.arrayBuffer());
+  // Node's undici fetch has been timing out (IPv6/IPv4 fallback issue) on
+  // Cloudinary URLs from this machine, even when curl works fine. Shell out
+  // to curl as a workaround — it consistently succeeds.
   const ext = url.toLowerCase().endsWith(".png") ? "png" : "jpg";
   const path = join(dir, `photo-${idx}.${ext}`);
-  writeFileSync(path, buf);
+  const { execFileSync } = await import("node:child_process");
+  execFileSync("curl", ["-sL", "--fail", "-o", path, url], {
+    timeout: 30_000,
+    stdio: ["ignore", "ignore", "pipe"],
+  });
   return path;
 }
 
