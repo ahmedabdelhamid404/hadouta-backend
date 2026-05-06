@@ -109,20 +109,26 @@ function resolveOutfit(
   return outfit.default;
 }
 
-// Pixar 3D anchor — front-loaded so the Canopus LoRA's trigger word ("Pixar 3D")
-// hits the model first. Per HuggingFace model card, the LoRA activates strongest
-// on the literal phrase "Pixar 3D"; placing it at prompt start gives strongest
-// LoRA-weight engagement. Per iteration 2 (2026-05-06): explicit anti-watercolor
-// negatives added because Bible's styleBible.negativeStyle was generated for the
-// watercolor pipeline and contained "NOT 3D-rendered" which actively conflicted
-// with the Pixar overlay.
+// Pixar 3D anchor — front-loaded so the LoRA-or-prompt activation hits first.
+// Per iteration 2 (2026-05-06): explicit anti-watercolor negatives countering
+// the Bible's anti-3D negativeStyle conflict. Per iteration 6 (2026-05-06,
+// after Nano Banana 2 swap): explicit NO-TEXT-IN-IMAGE clause because Nano
+// Banana 2's strong text-rendering capability was baking title typography
+// into cover illustrations ("HANINE'S FIRST DAY — Her Big Adventure Begins!");
+// title text is rendered in a separate Puppeteer layer in render-book.ts, so
+// the image must remain pure illustration with no embedded text.
 const PIXAR_STYLE_ANCHOR =
   "Pixar 3D animated style, in the visual register of Disney Encanto / Coco / " +
   "Inside Out — stylized 3D rendering, soft volumetric lighting, expressive " +
   "3D-rendered facial features, smooth subsurface scattering on skin, warm " +
   "cinematic color grading. Cartoon, stylized, NOT photorealistic, NOT " +
-  "watercolor, NOT 2D-flat, NOT a real photo. Maintain Egyptian cultural " +
-  "specificity in costuming, setting, and props as described.";
+  "watercolor, NOT 2D-flat, NOT a real photo. " +
+  "ABSOLUTELY NO text, typography, titles, labels, captions, or written " +
+  "words of any kind anywhere in the image — the illustration must be pure " +
+  "visual storytelling with zero rendered text (titles and book typography " +
+  "are added later by a separate layer). " +
+  "Maintain Egyptian cultural specificity in costuming, setting, and props " +
+  "as described.";
 
 /**
  * Prepend Pixar-3D style anchor language to a prompt string.
