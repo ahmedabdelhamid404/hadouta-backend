@@ -56,7 +56,7 @@ describe("generateCoverIllustration", () => {
 
     // Cover with no customer photo → text-to-image endpoint (no edit).
     expect(fal.subscribe).toHaveBeenCalledWith(
-      "fal-ai/nano-banana-pro",
+      "fal-ai/nano-banana-2",
       expect.objectContaining({
         input: expect.objectContaining({
           prompt: expect.stringContaining("watercolor scene of an Egyptian girl in Cairo"),
@@ -67,7 +67,7 @@ describe("generateCoverIllustration", () => {
     const lastCall = (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(lastCall[1].input.prompt).toContain("NOT photorealistic");
     expect(result.url).toContain("res.cloudinary.com");
-    expect(result.modelId).toBe("nano-banana-pro");
+    expect(result.modelId).toBe("nano-banana-2");
   });
 
   it("throws if no image returned", async () => {
@@ -101,7 +101,7 @@ describe("generateBodyIllustration", () => {
     });
 
     const lastCall = (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1)!;
-    expect(lastCall[0]).toBe("fal-ai/nano-banana-pro/edit");
+    expect(lastCall[0]).toBe("fal-ai/nano-banana-2/edit");
     expect(lastCall[1].input).toMatchObject({
       prompt: expect.stringContaining("scene 1"),
       image_urls: ["https://example.com/cover.png"],
@@ -127,7 +127,7 @@ describe("generateBodyIllustration", () => {
     });
 
     const lastCall = (fal.subscribe as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1)!;
-    expect(lastCall[0]).toBe("fal-ai/nano-banana-pro/edit");
+    expect(lastCall[0]).toBe("fal-ai/nano-banana-2/edit");
     expect(lastCall[1].input).toMatchObject({
       image_urls: ["https://example.com/photo.jpg"],
     });
@@ -192,7 +192,7 @@ describe("generateCoverIllustration with provider=flux-kontext-pixar", () => {
       customerPhotoUrls: ["https://res.cloudinary.com/test/photo1.jpg"],
     });
     expect(fal.subscribe).toHaveBeenCalledWith(
-      "fal-ai/nano-banana-pro/edit",
+      "fal-ai/nano-banana-2/edit",
       expect.any(Object),
     );
   });

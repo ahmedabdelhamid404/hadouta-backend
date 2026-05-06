@@ -25,13 +25,19 @@ export type IllustrationProvider = "nano-banana" | "flux-kontext-pixar";
 // images for character continuity.
 //
 // Architecture:
-//   Cover       → fal-ai/nano-banana-pro/edit, image_urls = [photoUrl]
+//   Cover       → fal-ai/nano-banana-2/edit, image_urls = [photoUrl]
 //                 Or non-edit if no photo. Photo provides identity.
-//   Body pages  → fal-ai/nano-banana-pro/edit, image_urls = [coverUrl, photoUrl?]
+//   Body pages  → fal-ai/nano-banana-2/edit, image_urls = [coverUrl, photoUrl?]
 //                 Cover provides character/style/scene continuity. Photo (if any)
 //                 reinforces face identity. Gemini's multimodal vision merges both.
-const NANO_BANANA_PRO_EDIT = "fal-ai/nano-banana-pro/edit";
-const NANO_BANANA_PRO = "fal-ai/nano-banana-pro";
+//
+// Phase 1 iteration 6 (2026-05-06): upgraded from `nano-banana-pro` (Gemini 3 Pro
+// Image, $0.15/edit) to `nano-banana-2` (Gemini 3.1 Flash Image, $0.08/edit). The
+// "2" model is Google's Feb-2026 release combining Pro-quality reasoning with
+// Flash-tier speed at ~half the price. Same multi-image-edit API shape, drop-in
+// swap. See https://fal.ai/models/fal-ai/nano-banana-2/edit
+const NANO_BANANA_2_EDIT = "fal-ai/nano-banana-2/edit";
+const NANO_BANANA_2 = "fal-ai/nano-banana-2";
 // Legacy Flux endpoints — kept for reference; no longer called.
 // const FLUX_PRO_ENDPOINT = "fal-ai/flux-pro/v1.1";
 // const FLUX_REDUX_ENDPOINT = "fal-ai/flux-pro/v1.1/redux";
@@ -199,7 +205,7 @@ export async function generateCoverIllustration(
     // identity preservation). Otherwise fall back to text-to-image.
     let result;
     if (photoUrls.length > 0) {
-      result = await fal.subscribe(NANO_BANANA_PRO_EDIT, {
+      result = await fal.subscribe(NANO_BANANA_2_EDIT, {
         input: {
           prompt: promptWithNegatives,
           image_urls: photoUrls,
@@ -210,7 +216,7 @@ export async function generateCoverIllustration(
         logs: false,
       });
     } else {
-      result = await fal.subscribe(NANO_BANANA_PRO, {
+      result = await fal.subscribe(NANO_BANANA_2, {
         input: {
           prompt: promptWithNegatives,
           aspect_ratio: "3:4",
@@ -230,7 +236,7 @@ export async function generateCoverIllustration(
       );
     }
     imageMeta = { url: image.url, contentType: image.content_type ?? "image/png" };
-    modelId = photoUrls.length > 0 ? "nano-banana-pro-edit" : "nano-banana-pro";
+    modelId = photoUrls.length > 0 ? "nano-banana-2-edit" : "nano-banana-2";
   }
 
   const buffer = await downloadAsBuffer(imageMeta.url);
@@ -323,7 +329,7 @@ export async function generateBodyIllustration(
     const promptWithNegatives = input.negativePrompt
       ? `${input.positivePrompt}. Avoid: ${input.negativePrompt}.`
       : input.positivePrompt;
-    const result = await fal.subscribe(NANO_BANANA_PRO_EDIT, {
+    const result = await fal.subscribe(NANO_BANANA_2_EDIT, {
       input: {
         prompt: promptWithNegatives,
         image_urls: imageUrls,
@@ -342,7 +348,7 @@ export async function generateBodyIllustration(
       );
     }
     imageMeta = { url: image.url, contentType: image.content_type ?? "image/png" };
-    modelId = "nano-banana-pro-edit";
+    modelId = "nano-banana-2-edit";
   }
 
   const buffer = await downloadAsBuffer(imageMeta.url);
