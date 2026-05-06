@@ -101,7 +101,7 @@ The protagonist tries 3 different things. With ${challengeCount} challenge pages
 
 Do NOT pad with filler scenes. Each page advances the arc.
 
-${FEW_SHOT_BLOCK()}
+${FEW_SHOT_BLOCK(ageBand)}
 
 # FINAL REMINDER (re-anchor — the model has just read 3 long examples; re-state the non-negotiables before generating)
 
@@ -258,8 +258,21 @@ You will be invoked via a structured-output system that enforces a JSON schema. 
 // + Ahmed reviewing each example.
 // =============================================================================
 
-function FEW_SHOT_BLOCK(): string {
-  const sections = ALL_EXAMPLES.map((example, idx) => {
+function FEW_SHOT_BLOCK(targetAgeBand: AgeBand): string {
+  // Per Sprint 3 audit Gap I + PromptHub few-shot recency-bias research:
+  // examples are reordered so the example matching THIS order's age band
+  // appears LAST (i.e. freshest in the model's attention window before it
+  // generates). Non-matching examples go first as general-pattern reference;
+  // the matched example acts as the "specifically for age band X" anchor.
+  const matched = ALL_EXAMPLES.filter(
+    (e) => e.context.childAgeBand === targetAgeBand,
+  );
+  const others = ALL_EXAMPLES.filter(
+    (e) => e.context.childAgeBand !== targetAgeBand,
+  );
+  const ordered = [...others, ...matched];
+
+  const sections = ordered.map((example, idx) => {
     const ctx = example.context;
     const story = example.story;
     return `## Example ${idx + 1} — theme: ${ctx.theme} / moral: ${ctx.moralValue} / age: ${ctx.childAgeBand}
