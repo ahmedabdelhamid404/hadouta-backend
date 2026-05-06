@@ -118,7 +118,13 @@ async function callFluxKontextPixar(args: {
     : enrichedPrompt;
 
   const loraUrl = process.env.PIXAR_STYLE_LORA_URL;
-  const loras = loraUrl ? [{ path: loraUrl, scale: 0.85 }] : undefined;
+  // Phase 1 iteration 2 (2026-05-06): bumped scale 0.85 → 0.95 after first run
+  // produced one outlier image that looked photographic rather than Pixar-styled.
+  // Root cause was Bible's styleBible.negativeStyle ("NOT 3D-rendered") fighting
+  // the LoRA — once that's countered by anti-watercolor negatives in the prompt
+  // (see appendPixarStyleAnchor), higher LoRA scale is safe and gives stronger
+  // style adherence.
+  const loras = loraUrl ? [{ path: loraUrl, scale: 0.95 }] : undefined;
 
   // The fal.ai SDK's `FluxKontextMultiInput` type doesn't include `loras` yet
   // even though the runtime accepts it (Task 0 verified empirically on

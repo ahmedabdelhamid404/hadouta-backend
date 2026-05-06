@@ -109,24 +109,35 @@ function resolveOutfit(
   return outfit.default;
 }
 
+// Pixar 3D anchor — front-loaded so the Canopus LoRA's trigger word ("Pixar 3D")
+// hits the model first. Per HuggingFace model card, the LoRA activates strongest
+// on the literal phrase "Pixar 3D"; placing it at prompt start gives strongest
+// LoRA-weight engagement. Per iteration 2 (2026-05-06): explicit anti-watercolor
+// negatives added because Bible's styleBible.negativeStyle was generated for the
+// watercolor pipeline and contained "NOT 3D-rendered" which actively conflicted
+// with the Pixar overlay.
 const PIXAR_STYLE_ANCHOR =
-  "Render in Pixar 3D animated style — soft volumetric lighting, " +
-  "expressive facial features, warm cinematic color grading, smooth " +
-  "subsurface scattering on skin, in the visual register of Disney " +
-  "Encanto / Coco / Inside Out. Maintain Egyptian cultural specificity " +
-  "in costuming, setting, and props as described above.";
+  "Pixar 3D animated style, in the visual register of Disney Encanto / Coco / " +
+  "Inside Out — stylized 3D rendering, soft volumetric lighting, expressive " +
+  "3D-rendered facial features, smooth subsurface scattering on skin, warm " +
+  "cinematic color grading. Cartoon, stylized, NOT photorealistic, NOT " +
+  "watercolor, NOT 2D-flat, NOT a real photo. Maintain Egyptian cultural " +
+  "specificity in costuming, setting, and props as described.";
 
 /**
- * Append Pixar-3D style anchor language to a prompt string.
+ * Prepend Pixar-3D style anchor language to a prompt string.
  *
  * Used by the `flux-kontext-pixar` illustration provider to overlay a
  * concrete style register on top of the Bible-driven prompt. The Bible
  * itself stays unchanged on disk — the override happens at prompt-assembly
  * time so we don't need to regenerate persisted Bibles for Phase 1.
  *
- * Idempotent: if the anchor is already present, returns the prompt unchanged.
+ * Anchor is PREPENDED (not appended) per Phase 1 iteration 2 finding: the
+ * Canopus LoRA's trigger word "Pixar 3D" must hit the model first to activate
+ * the LoRA's style weights with full strength. Idempotent: if the anchor is
+ * already present, returns the prompt unchanged.
  */
 export function appendPixarStyleAnchor(prompt: string): string {
   if (prompt.includes("Pixar 3D animated style")) return prompt;
-  return `${prompt}. ${PIXAR_STYLE_ANCHOR}`;
+  return `${PIXAR_STYLE_ANCHOR} ${prompt}`;
 }
