@@ -67,7 +67,9 @@ export const bibleSchema = z.object({
     }),
     supportingCharacters: z
       .array(supportingCharacterSchema)
-      .describe("MVP: empty array. Future: regional prompting per character."),
+      .describe(
+        "One entry per named non-protagonist character who appears anywhere in the story (mother, father, teacher, classmates, friends, neighbors). Each entry: name (matching what story.pages[].charactersOnPage uses), relationship to the protagonist, and a detailed appearance description with explicit age cues for adults (NOT a teenager — 35-year-old woman with smile lines and grey at temples) so the illustration model doesn't render adults as older versions of the protagonist. Empty array only if the story is genuinely solo (no other named characters).",
+      ),
   }),
   settingBible: z.object({
     primaryLocation: z

@@ -3,10 +3,15 @@
 // so generateObject() returns structured JSON the rest of the pipeline can
 // trust without ad-hoc parsing.
 //
-// New per-page fields adopted from session 9.7 HekayaAI critical review:
+// Per-page fields:
 //   - act: "setup" | "challenge" | "resolution" — three-act structure tag
 //   - emotionalBeat: short English label of the page's emotional beat
 //   - moralMoment: boolean flag on the single page where the moral lands
+//   - charactersOnPage: names of characters visible in the scene — feeds the
+//     illustration prompt builder so each render correctly composes the cast
+//   - keyObjectOrDetail: one specific visual prop/anchor — locks accessory
+//     state across pages (Phase 1 found ribbon-vs-headband drift between pages
+//     when no specific prop was committed to)
 //
 // Story-level additions:
 //   - coverDescription: separate from page 1; iconic + emotional summary
@@ -51,6 +56,19 @@ export const storyPageSchema = z.object({
     .max(280, "scene must be ≤280 chars — keep it tight; the Bible carries the rest")
     .describe(
       "Short English scene addendum for THIS page. 1–2 sentences max. Describe ONLY what is unique to this page (action, location-within-setting, emotional moment). DO NOT include character description, style, or setting details — those come from the Bible. Example: 'Hena gathers kahk biscuits from a metal tray on the coffee table' — NOT 'Egyptian girl in apartment, watercolor style, gathering biscuits from a tray.'",
+    ),
+  charactersOnPage: z
+    .array(z.string().min(1))
+    .min(1, "charactersOnPage must include at least the protagonist")
+    .describe(
+      "Names of characters visible in this page's scene. ALWAYS include the protagonist. Add every named supporting character who is present in the action (e.g. ['Hanine', 'Mama', 'Teacher Sara']). Drives illustration character-presence injection — supporting characters omitted here will not be rendered with their locked appearance from the Bible.",
+    ),
+  keyObjectOrDetail: z
+    .string()
+    .min(5, "keyObjectOrDetail must be ≥5 chars — be specific, not generic")
+    .max(80, "keyObjectOrDetail must be ≤80 chars — one prop, not a list")
+    .describe(
+      "ONE specific visual prop or detail anchoring this page. Be concrete: 'red satin ribbon in her right hand', 'brass tray of kahk biscuits', 'navy school satchel with green stitching' — NOT generic ('a toy', 'food', 'a bag'). Locks accessory state across pages so props don't drift between renders.",
     ),
 });
 

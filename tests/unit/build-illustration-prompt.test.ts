@@ -5,10 +5,13 @@ import {
 } from "../../src/lib/ai/prompts/build-illustration-prompt.js";
 import type { Bible } from "../../src/lib/ai/schemas/bible.js";
 
+// SAMPLE_BIBLE matches the post-2026-05-06 Pixar-3D register that Bible-gen
+// now produces by default (per ADR-027 + bible-system-prompt rewrite). Tests
+// should reflect production reality, not pre-pivot watercolor sample data.
 const SAMPLE_BIBLE: Bible = {
   characterBible: {
     mainChild: {
-      name: "هُنَا",
+      name: "Hena",
       age: 4,
       gender: "girl",
       appearance: {
@@ -24,7 +27,14 @@ const SAMPLE_BIBLE: Bible = {
       },
       personalityVisual: "energetic posture, often mid-motion, expressive eyebrows",
     },
-    supportingCharacters: [],
+    supportingCharacters: [
+      {
+        name: "Mama",
+        relationship: "mother",
+        appearance:
+          "35-year-old Egyptian woman, NOT a teenager — warm brown skin, shoulder-length wavy black hair pulled back with a few grey strands at the temples, soft smile lines around the eyes, wearing a light blue cotton kaftan",
+      },
+    ],
   },
   settingBible: {
     primaryLocation: "Hena's family apartment in Maadi, Cairo",
@@ -33,11 +43,14 @@ const SAMPLE_BIBLE: Bible = {
     secondaryLocations: [],
   },
   styleBible: {
-    medium: "soft watercolor on cream paper, visible brush strokes, gentle wet-edge bleeds",
-    palette: "warm cream backgrounds, terracotta accents, soft sage greens, golden afternoon light",
-    light: "golden afternoon light through soft window curtains",
-    negativeStyle: "NOT photorealistic, NOT 3D-rendered, NOT Disney-cartoon, NOT anime, NOT vector-flat",
-    compositionAnchors: "subject in upper two-thirds of frame, neutral lower third, no embedded text or signage in scene",
+    medium:
+      "3D animated illustration in the visual style of Pixar's Encanto, Coco, and Inside Out — finished feature-film frame with smooth subsurface skin shading and large expressive eyes",
+    palette: "warm cinematic color grading — rich earth tones, soft pastel highlights, golden afternoon warmth",
+    light: "soft cinematic lighting, warm golden hour where mood permits",
+    negativeStyle:
+      "Not watercolor, not 2D flat illustration, not anime, not photorealistic — Pixar 3D animated film style only. No text, letters, or typography anywhere in the image.",
+    compositionAnchors:
+      "Hero (protagonist) occupies ~60% of frame height; setting fills remaining ~40%. Face clearly readable at thumbnail size. Rule-of-thirds anchoring on identity-critical pages.",
   },
   culturalNotes: [
     "During Eid el-Fitr — kahk biscuits on table, NOT chocolate chip cookies",
@@ -51,6 +64,7 @@ describe("buildIllustrationPrompt", () => {
       bible: SAMPLE_BIBLE,
       scene: "Hena gathers kahk from a metal tray on the coffee table",
       pageNumber: 5,
+      hasReferencePhotos: true,
     });
     expect(positive).toContain("dark curly hair");
     expect(positive).toContain("yellow cotton sundress");
@@ -61,6 +75,7 @@ describe("buildIllustrationPrompt", () => {
       bible: SAMPLE_BIBLE,
       scene: "Hena gathers kahk",
       pageNumber: 5,
+      hasReferencePhotos: true,
     });
     expect(positive).toContain("terracotta tile floors");
   });
@@ -70,6 +85,7 @@ describe("buildIllustrationPrompt", () => {
       bible: SAMPLE_BIBLE,
       scene: "Hena gathers kahk from a metal tray",
       pageNumber: 5,
+      hasReferencePhotos: true,
     });
     expect(positive).toContain("Hena gathers kahk from a metal tray");
   });
@@ -79,18 +95,22 @@ describe("buildIllustrationPrompt", () => {
       bible: SAMPLE_BIBLE,
       scene: "Hena at the table",
       pageNumber: 5,
+      hasReferencePhotos: true,
     });
     expect(positive).toContain("kahk biscuits");
     expect(positive).toContain("NOT chocolate chip cookies");
   });
 
-  it("returns negative prompt from styleBible.negativeStyle", () => {
-    const { negative } = buildIllustrationPrompt({
+  it("folds negativeStyle into the positive prompt's CONSTRAINTS block (negative field is empty per Nano Banana 2's lack of negative_prompt support)", () => {
+    const { positive, negative } = buildIllustrationPrompt({
       bible: SAMPLE_BIBLE,
       scene: "Hena at the table",
       pageNumber: 5,
+      hasReferencePhotos: true,
     });
-    expect(negative).toContain("NOT photorealistic");
+    expect(positive).toContain("[CONSTRAINTS]");
+    expect(positive).toContain("Not watercolor");
+    expect(negative).toBe("");
   });
 
   it("uses outfit variation when page number matches", () => {
@@ -113,33 +133,49 @@ describe("buildIllustrationPrompt", () => {
       bible: bibleWithVariation,
       scene: "Hena celebrates",
       pageNumber: 13,
+      hasReferencePhotos: true,
     });
     const { positive: defaultPrompt } = buildIllustrationPrompt({
       bible: bibleWithVariation,
       scene: "Hena reads",
       pageNumber: 5,
+      hasReferencePhotos: true,
     });
     expect(variantPrompt).toContain("red Eid dress");
     expect(defaultPrompt).toContain("yellow cotton sundress");
   });
 
-  it("body pages include identity-preservation language", () => {
+  it("body pages include identity-preservation language and reference-roles preamble when photos provided", () => {
     const { positive } = buildIllustrationPrompt({
       bible: SAMPLE_BIBLE,
       scene: "Hena gathers kahk",
       pageNumber: 5,
+      hasReferencePhotos: true,
     });
-    expect(positive).toMatch(/identity|EXACTLY match|same face/i);
-    expect(positive.toLowerCase()).toContain("reference photo");
+    expect(positive).toMatch(/IDENTITY PRESERVATION/);
+    expect(positive).toContain("reference photos");
+    expect(positive).toContain("[REFERENCE IMAGES]");
   });
 
-  it("cover (pageNumber=0) does NOT include the body-only identity language", () => {
+  it("body pages without reference photos skip the Image-N preamble (no orphan references)", () => {
+    const { positive } = buildIllustrationPrompt({
+      bible: SAMPLE_BIBLE,
+      scene: "Hena gathers kahk",
+      pageNumber: 5,
+      hasReferencePhotos: false,
+    });
+    expect(positive).not.toContain("[REFERENCE IMAGES]");
+    expect(positive).not.toContain("Image 1");
+  });
+
+  it("cover (pageNumber=0) does NOT include the body-only IDENTITY PRESERVATION block", () => {
     // Cover gets a different scene block — it doesn't need the per-page
     // identity-preservation guard because there's no prior page to drift from.
     const { positive } = buildIllustrationPrompt({
       bible: SAMPLE_BIBLE,
       scene: "Hena holding kahk surrounded by friends",
       pageNumber: 0,
+      hasReferencePhotos: true,
     });
     expect(positive).not.toMatch(/IDENTITY PRESERVATION/);
   });
@@ -149,8 +185,45 @@ describe("buildIllustrationPrompt", () => {
       bible: SAMPLE_BIBLE,
       scene: "Hena holding a tray of kahk surrounded by friends",
       pageNumber: 0,
+      hasReferencePhotos: true,
     });
     expect(positive).toContain("yellow cotton sundress");
+  });
+
+  it("injects supporting character appearance from Bible when charactersOnPage names them", () => {
+    const { positive } = buildIllustrationPrompt({
+      bible: SAMPLE_BIBLE,
+      scene: "Hena hugs Mama",
+      pageNumber: 7,
+      hasReferencePhotos: true,
+      charactersOnPage: ["Hena", "Mama"],
+    });
+    expect(positive).toContain("[OTHER CHARACTERS]");
+    expect(positive).toContain("Mama");
+    expect(positive).toContain("NOT a teenager");
+    expect(positive).toContain("smile lines");
+  });
+
+  it("notes 'alone in this scene' when only the protagonist is on the page", () => {
+    const { positive } = buildIllustrationPrompt({
+      bible: SAMPLE_BIBLE,
+      scene: "Hena reads quietly on the sofa",
+      pageNumber: 5,
+      hasReferencePhotos: true,
+      charactersOnPage: ["Hena"],
+    });
+    expect(positive).toContain("alone in this scene");
+  });
+
+  it("surfaces keyObjectOrDetail in the SETTING & PROPS block", () => {
+    const { positive } = buildIllustrationPrompt({
+      bible: SAMPLE_BIBLE,
+      scene: "Hena ties a ribbon in her hair",
+      pageNumber: 5,
+      hasReferencePhotos: true,
+      keyObjectOrDetail: "deep red satin ribbon, ~30cm long",
+    });
+    expect(positive).toContain("Key prop visible in this scene: deep red satin ribbon");
   });
 });
 

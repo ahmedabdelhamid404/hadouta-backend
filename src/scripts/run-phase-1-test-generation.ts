@@ -51,7 +51,12 @@ async function main(): Promise<void> {
   const story = gen.storyJson as {
     title?: string;
     coverScene?: string;
-    pages?: Array<{ scene: string; text: string }>;
+    pages?: Array<{
+      scene: string;
+      text: string;
+      charactersOnPage?: string[];
+      keyObjectOrDetail?: string;
+    }>;
   };
   const orderId = gen.orderId;
   const pages = story.pages ?? [];
@@ -89,6 +94,7 @@ async function main(): Promise<void> {
     bible,
     scene: coverScene,
     pageNumber: 0,
+    hasReferencePhotos: photoUrls.length > 0,
   });
   console.log("\n→ Generating Phase 1 cover with flux-kontext-pixar...");
   const coverResult = await generateCoverIllustration({
@@ -115,6 +121,9 @@ async function main(): Promise<void> {
       bible,
       scene: page.scene,
       pageNumber,
+      hasReferencePhotos: photoUrls.length > 0,
+      charactersOnPage: page.charactersOnPage,
+      keyObjectOrDetail: page.keyObjectOrDetail,
     });
     console.log(
       `\n→ Generating Phase 1 page ${pageNumber} (idx ${idx}) with flux-kontext-pixar...`,

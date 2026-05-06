@@ -197,14 +197,27 @@ export async function runGenerationPipeline(
       .where(eq(generations.id, generationId));
 
     // Step 3: Build per-page illustration prompts from Bible + scene addendum.
+    // hasReferencePhotos toggles the Image-N reference-roles preamble so the
+    // prompt only mentions reference images when they're actually attached.
+    // Per-page charactersOnPage + keyObjectOrDetail drive supporting-character
+    // injection and prop anchoring (Sprint 3 buildIllustrationPrompt rewrite).
+    const hasReferencePhotos = customerPhotoUrls.length > 0;
     const coverPrompts = buildIllustrationPrompt({
       bible,
       scene: storyResult.story.coverDescription,
       pageNumber: 0,
+      hasReferencePhotos,
     });
     const pagePrompts = storyResult.story.pages.map((p) => ({
       pageNumber: p.number,
-      ...buildIllustrationPrompt({ bible, scene: p.scene, pageNumber: p.number }),
+      ...buildIllustrationPrompt({
+        bible,
+        scene: p.scene,
+        pageNumber: p.number,
+        hasReferencePhotos,
+        charactersOnPage: p.charactersOnPage,
+        keyObjectOrDetail: p.keyObjectOrDetail,
+      }),
     }));
 
     // Step 4: Generate cover + body illustrations.

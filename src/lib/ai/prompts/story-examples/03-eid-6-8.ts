@@ -36,6 +36,8 @@ export const EID_GENEROSITY_6_8 = {
         act: "setup",
         emotionalBeat: "festive joy and family belonging",
         moralMoment: false,
+        charactersOnPage: ["Maryam", "Mama", "Umm Mohamed (neighbor)"],
+        keyObjectOrDetail: "metal tray of fresh kahk dough on a flour-dusted counter",
         text: "في صباح أول يوم من العيد، صَحْيَت مَرْيَم على ريحة الكَحْك السخن وأصوات ضحك العيلة في الصالة. لبست فستانها الأخضر الجديد، ونزلت على المطبخ تلاقي ماما والست أم محمد، الجارة، بيلفّوا آخر صنية كَحْك. عيدية مَرْيَم كانت مبسوطاها فيها ورقة جديدة، حطّتها في جيبها. النهارده يوم خاص — أول مرة هتساعد ماما تستقبل ضيوف العيد.",
         scene:
           "Maryam in the kitchen on Eid morning, mother and neighbor woman rolling kahk dough on the counter beside her",
@@ -45,6 +47,8 @@ export const EID_GENEROSITY_6_8 = {
         act: "setup",
         emotionalBeat: "noticing inequality at the festival",
         moralMoment: false,
+        charactersOnPage: ["Maryam", "Suad"],
+        keyObjectOrDetail: "Suad's plain everyday dress amid colorful Eid clothes around her",
         text: "بعد الفطار، نزلت مَرْيَم تحت العمارة عشان تشوف جيرانها وتعيّد عليهم. الشارع كان لابس العيد كله — بالونات على الشبابيك، وأطفال بفساتين جدد. مَرْيَم لمحت سُعاد، البنت اللي ساكنة في الدور الأرضي. سُعاد كانت لابسة فستانها العادي، واقفة بعيد، ومش بتلعب مع حد. مَرْيَم عرفت إن أهل سُعاد لسه ما عرفوش يحتفلوا بعيد كبير.",
         scene:
           "Apartment street on Eid morning, children in bright clothes celebrating, one small girl in plain dress standing alone watching from a distance",
@@ -54,6 +58,8 @@ export const EID_GENEROSITY_6_8 = {
         act: "challenge",
         emotionalBeat: "first attempt — pride refuses charity",
         moralMoment: false,
+        charactersOnPage: ["Maryam", "Suad"],
+        keyObjectOrDetail: "small folded Egyptian banknote in Maryam's outstretched hand",
         text: "مَرْيَم قَرَّبَت من سُعاد بحماس، وحَطِّت إيدها في جيبها. طَلَّعَت نص العيدية وقالت: «عيد سعيد يا سُعاد! دي ليكي.» سُعاد بَصِّت على الفلوس، ووشها اتْوَرَّد. حَطِّت إيديها ورا ضهرها وقالت بهدوء: «لأ يا مَرْيَم، شكراً. ماما قالتلي ما آخدش حاجة من حد.» مَرْيَم رَجَّعَت الفلوس على جيبها وحست بنوع غريب من الحرج.",
         scene:
           "Maryam offering money with bright eyes, Suad gently refusing with hands behind her back — neither shame nor hurt",
@@ -63,6 +69,8 @@ export const EID_GENEROSITY_6_8 = {
         act: "challenge",
         emotionalBeat: "second attempt — kindness misunderstood",
         moralMoment: false,
+        charactersOnPage: ["Maryam", "Suad"],
+        keyObjectOrDetail: "single piece of kahk wrapped in a white cotton handkerchief",
         text: "مَرْيَم فَكَّرَت لحظة. مش هي اللي محتاجة فلوس. رَكَضَت ع البيت، ولَفِّت قطعة كَحْك في منديل. رجعت وقالت: «إيه رأيك تجربي كَحْك ماما؟ بتعمله أحلى من اللي في السوق.» سُعاد ابْتَسَمَت ابتسامة صغيرة، بس برضه قالت: «متشكرة، بس أنا فطرت.» مَرْيَم لَفِّت الكَحْك تاني، وقعدت جنبها على درجة العمارة. كانت في حاجة في عينين سُعاد — مش جوع، حاجة تانية.",
         scene:
           "The two girls sitting together on the apartment building steps, Maryam holding a small wrapped piece of kahk, Suad politely declining",
@@ -72,6 +80,8 @@ export const EID_GENEROSITY_6_8 = {
         act: "challenge",
         emotionalBeat: "the deeper realization (dark moment)",
         moralMoment: false,
+        charactersOnPage: ["Maryam", "Suad"],
+        keyObjectOrDetail: "the worn stone steps of the apartment building they sit on",
         text: "مَرْيَم سألت بصوت هاديء: «إنتي ما بتحبيش العيد؟» سُعاد بَصِّت على الأرض. قالت: «أنا بحب العيد، بس مش بنعمل في بيتنا حاجات كده. ماما بتشتغل، وبابا تعبان. مش زيكم.» مَرْيَم سَكَتَت. لأول مرة، فهمت إن العيد مش بس فلوس وكَحْك. سُعاد كانت محتاجة حاجة أكبر من الحاجتين دول.",
         scene:
           "Close-up of the two girls on apartment steps, Suad looking down quietly, Maryam listening with empathetic understanding",
@@ -81,6 +91,8 @@ export const EID_GENEROSITY_6_8 = {
         act: "resolution",
         emotionalBeat: "creative generosity — inclusion not charity",
         moralMoment: true,
+        charactersOnPage: ["Maryam", "Suad"],
+        keyObjectOrDetail: "Maryam's hand gently clasping Suad's hand toward the apartment door",
         text: "فِكْرة خَطَرَت لمَرْيَم زي شُعاع. قامت وأخدت إيد سُعاد. «تعالي معايا.» سُعاد سَحَبَت إيدها: «لأ، أنا ما عرفش...» مَرْيَم ابْتَسَمَت: «مش لتاخدي حاجة. عشان تساعديني. ماما بتعمل صنية كَحْك تانية، ومحتاجة إيدين شاطرة. إنتي شاطرة، صح؟» سُعاد بَصِّت لها بِنَوْع من الدهشة، وفي الأخير هَزِّت راسها.",
         scene:
           "Maryam pulling Suad by the hand toward the apartment door, gentle insistence — Suad looking surprised but tempted",
@@ -90,6 +102,8 @@ export const EID_GENEROSITY_6_8 = {
         act: "resolution",
         emotionalBeat: "joyful belonging through co-creation",
         moralMoment: false,
+        charactersOnPage: ["Maryam", "Suad", "Mama", "Umm Mohamed (neighbor)"],
+        keyObjectOrDetail: "flour-dusted kitchen counter with rolled kahk pieces between four pairs of hands",
         text: "في المطبخ، ماما رَحَّبَت بسُعاد كأنها بنتها. الست أم محمد ضِحْكَت: «يلا يا حبيبتي، علّميني أنا إزاي بتلفي.» سُعاد بدأت بخجل، بس بعد كم دقيقة، إيديها كانت بتشتغل بسرعة وبفرح. ضِحْكَت لأول مرة. مَرْيَم اتْفَرَّجَت عليها، وحست إن قلبها بقى أكبر من فستانها الجديد. الكَحْك اللي عملوه كان شكله مش متساوي، بس كان أحلى كَحْك في الدنيا.",
         scene:
           "Three women and two girls all rolling kahk together at the flour-covered kitchen counter, Suad now smiling and laughing",
@@ -99,6 +113,8 @@ export const EID_GENEROSITY_6_8 = {
         act: "resolution",
         emotionalBeat: "dignity and friendship",
         moralMoment: false,
+        charactersOnPage: ["Maryam", "Suad"],
+        keyObjectOrDetail: "metal tray of finished kahk Suad carries proudly down the stairs",
         text: "آخر اليوم، سُعاد طلعت من البيت ماسكة صنية كَحْك في إيدها — الكَحْك اللي عملته بإيديها. قالت لمَرْيَم: «هاخد ده لماما وبابا.» مَرْيَم حَضَنَتها. لما رجعت لماما، حَكَت لها كل حاجة. ماما قالت بهدوء: «الكَرَم الحقيقي مش إنك تدّي حاجة. الكَرَم إنك تخلي حد يحس إنه عُضْو في الفرحة.»",
         scene:
           "Suad walking proudly down apartment stairs holding a tray of kahk she made, Maryam waving from a doorway above",

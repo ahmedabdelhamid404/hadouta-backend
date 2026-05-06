@@ -35,6 +35,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         act: "setup",
         emotionalBeat: "joy and possession",
         moralMoment: false,
+        charactersOnPage: ["Layla"],
+        keyObjectOrDetail: "small bright-red sand bucket with metal handle",
         text: "كان عند لَيْلَى دَلْو صغير لونه أحمر، أحلى لعبة عندها. بتاخده معاها كل يوم في الحديقة، وبتعمل بيه قِلَاع من الرَمْل عالية.",
         scene:
           "Layla in a sandbox holding her small red bucket happily, scooping sand with cherished pride",
@@ -44,6 +46,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         act: "setup",
         emotionalBeat: "noticing another's loneliness",
         moralMoment: false,
+        charactersOnPage: ["Layla", "Nour"],
+        keyObjectOrDetail: "weathered wooden park bench under a tree",
         text: "في يوم، شافت لَيْلَى بنت صغيرة جديدة قاعدة لِوَحْدها على الكرسي. إيديها فاضية، وعينيها بتبص على الأطفال اللي بيلعبوا.",
         scene:
           "A new small girl sits alone on a wooden bench, empty hands resting in lap, watching other children play",
@@ -53,6 +57,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         act: "challenge",
         emotionalBeat: "first attempt — failed",
         moralMoment: false,
+        charactersOnPage: ["Layla", "Nour"],
+        keyObjectOrDetail: "Layla's red bucket still in her left hand",
         text: "لَيْلَى لَوَّحَت لها بإيدها وقالت: «هَاي!» البنت بَصَّت لها وما رَدِّتش. لَيْلَى افْتَكَرَت إنها مَكْسُوفة.",
         scene:
           "Layla waves cheerfully from a few steps away, the new girl looking down at her own hands shyly",
@@ -62,6 +68,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         act: "challenge",
         emotionalBeat: "second attempt — failed",
         moralMoment: false,
+        charactersOnPage: ["Layla", "Nour"],
+        keyObjectOrDetail: "colorful striped rubber ball Layla offers",
         text: "لَيْلَى جَابَت كرتها وقالت: «تعالي نِلعب!» البنت هَزِّت راسها. لَيْلَى افْتَكَرَت: «يمكن مش عاوزة كرة.»",
         scene:
           "Layla holds out a colorful ball with bright eyes, the shy girl gently shakes her head no",
@@ -71,6 +79,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         act: "challenge",
         emotionalBeat: "the inner choice (dark moment of decision)",
         moralMoment: false,
+        charactersOnPage: ["Layla"],
+        keyObjectOrDetail: "small red sand bucket cradled in Layla's hands",
         text: "لَيْلَى بَصِّت على دلوها الأحمر. بَصِّت على إيدين البنت الفاضيين. وفَكَّرَت فِكْرة كبيرة في قلبها الصغير.",
         scene:
           "Close-up of Layla looking thoughtfully at her beloved red bucket cradled in her hands, contemplative expression",
@@ -80,6 +90,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         act: "resolution",
         emotionalBeat: "act of generosity (moral demonstrated)",
         moralMoment: true,
+        charactersOnPage: ["Layla", "Nour"],
+        keyObjectOrDetail: "small red sand bucket passing from Layla's hands to Nour's",
         text: "مِشِيت ناحيتها وحَطِّت الدَلْو في إيدها. قالت بصوت لطيف: «ده ليكي دلوقتي. تعالي نبني سَوا.»",
         scene:
           "Layla places her red bucket gently into the new girl's hands, both girls at eye level — defining moment",
@@ -89,6 +101,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         act: "resolution",
         emotionalBeat: "connection and reciprocity",
         moralMoment: false,
+        charactersOnPage: ["Layla", "Nour"],
+        keyObjectOrDetail: "small red sand bucket now held by Nour",
         text: "البنت ابْتَسَمَت لأول مرة. قالت: «أنا اسمي نُور.» وقامت تِجْري ورا لَيْلَى ناحية الرَمْلَة.",
         scene:
           "The two girls running side by side toward the sandbox, Nour now smiling and holding the red bucket",
@@ -98,6 +112,8 @@ export const FRIENDSHIP_KINDNESS_3_5 = {
         act: "resolution",
         emotionalBeat: "internal warmth (show, not tell)",
         moralMoment: false,
+        charactersOnPage: ["Layla", "Nour"],
+        keyObjectOrDetail: "tall sand castle with three turrets they built together",
         text: "بَنُوا قَلْعة كبيرة سَوا. الشمس كانت بتغيب، ولَيْلَى كانت حاسة بحاجة دافية في صدرها — أحلى من الدَلْو.",
         scene:
           "The two girls together at sunset finishing a large sand castle, faces lit by golden hour light",

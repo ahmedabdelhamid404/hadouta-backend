@@ -213,6 +213,8 @@ For each page you must set:
 - \`emotionalBeat\` — short ENGLISH label (3-12 words) of the emotional beat, e.g. "anticipation mixed with anxiety", "first attempt — failed", "courageous action solving the problem". Used by illustration AI for mood guidance and by admin reviewer to scan the emotional arc.
 - \`moralMoment\` — boolean. true on EXACTLY ONE page — the page where the moral is most clearly demonstrated through the protagonist's action. false on all other pages.
 - \`scene\` — ENGLISH (not Arabic) — 1–2 sentence scene-only description: action + immediate location + emotional beat for THIS page. **DO NOT** include character description (hair, skin, clothes), art style (watercolor, palette), or setting boilerplate (Cairo apartment) — those come from the Bible and are added automatically when prompts are assembled. Aim for 60–200 characters. Example GOOD: "Hena gathers kahk from a metal tray on the coffee table." Example BAD: "Egyptian girl with curly hair in a Cairo apartment, watercolor warm tones, gathering kahk biscuits from a tray on a coffee table — feeling joyful."
+- \`charactersOnPage\` — array of names (English transliterations) of every character visible on this page. ALWAYS include the protagonist. Add every named supporting character whose face/body appears in the scene (mother, father, teacher, classmates, friends, neighbors). The illustration prompt builder uses this to inject each named character's locked appearance from the Bible — characters omitted here will NOT have their distinct face rendered, and the model may default to generic faces or accidentally blend the protagonist's features into them. Use the same name across pages (consistent transliteration). Example GOOD: \`["Layla", "Nour"]\` for a page where both girls appear; \`["Layla"]\` for a solo introspection page. Example BAD: \`["Layla"]\` for a page where the mother is clearly in the scene — that omission will make the mother render with a wrong face.
+- \`keyObjectOrDetail\` — ONE specific visual prop or detail anchoring this page (5–80 chars). Be CONCRETE with material/color/size: "deep red satin ribbon, ~30cm long", "brass tray of fresh kahk biscuits", "navy school satchel with green stitching" — NOT generic ("a toy", "food", "a bag", "an object"). The illustrator references this prop verbatim in the action block; specific commitment is what prevents accessory drift between pages (Phase 1 saw "ribbon" become "headband" become "bow" across pages because no specific prop was ever committed to). If the page has no scene-critical prop, pick a defining setting element instead ("weathered wooden park bench under acacia tree", "wrought-iron balcony railing in morning light").
 
 # Output
 
@@ -233,7 +235,9 @@ You will be invoked via a structured-output system that enforces a JSON schema. 
 - moralStatement phrased as a question rather than a takeaway
 - coverDescription with critical elements near the bottom edge of the frame
 - \`scene\` field including character description, art style, or setting boilerplate (those come from the Bible — keep scene addendums tight, just the per-page action + emotional beat)
-- \`coverDescription\` written as a full prompt instead of a 1-2 sentence iconic summary`;
+- \`coverDescription\` written as a full prompt instead of a 1-2 sentence iconic summary
+- \`charactersOnPage\` missing supporting characters who are visible in the scene (e.g. listing only the protagonist when the mother is also present) — the illustration will render the omitted character with a wrong face
+- \`keyObjectOrDetail\` written as a generic noun ("a toy", "food", "a bag") instead of a concrete material+color+size phrase ("deep red satin ribbon", "brass tray of kahk")`;
 
 // =============================================================================
 // Few-shot block — the three reviewed example stories appended to the prompt.
