@@ -45,10 +45,25 @@ export interface BibleGeneratorInternalOptions {
 /**
  * Calls gpt-4o (NOT gpt-4o-mini — meaningfully weaker at multimodal) to extract
  * identity-anchoring facts from a customer-uploaded child photo. Returns 2–4
- * sentences in English describing hair, skin, eyes, distinguishing features,
- * AND any traditional/cultural clothing visible — no background, no personality
- * speculation, no name. The result feeds the Bible's mainChild appearance +
- * outfit blocks.
+ * sentences in English describing hair, skin tone, eyes, distinguishing
+ * features, AND any traditional/cultural clothing visible — no background,
+ * no personality speculation, no name. The result feeds the Bible's mainChild
+ * appearance + outfit blocks.
+ *
+ * 2026-05-06 rewrite (per AI Engineer audit Gaps E+F+G):
+ *   - Image placed BEFORE the text (Azure OpenAI vision docs: improves
+ *     attention-to-image-detail measurably)
+ *   - Two-step "describe-first-then-extract" structure (Microsoft + OpenAI
+ *     vision docs explicitly recommend this for higher accuracy)
+ *   - Anchored skin-tone vocabulary (very fair / fair / light olive / olive
+ *     / tan / medium brown / deep brown / very deep) — without anchors the
+ *     description drifts between calls ("warm tan" vs "olive" vs "wheat"
+ *     for the same photo) and the Bible's downstream skinTone field becomes
+ *     unstable
+ *   - Explicit "flag uncertainty" instruction so the model says "I can't
+ *     tell" instead of confidently confabulating (the canonical Phase H
+ *     galabeya miss was a confident-but-wrong vision call on an ambiguous
+ *     torso shot)
  *
  * Per Phase H verification (2026-05-04): gpt-4o-mini missed a white Egyptian
  * galabeya entirely, producing generic "colorful t-shirt" outfit guesses.
@@ -61,11 +76,31 @@ async function describePhoto(photoUrl: string): Promise<string> {
       {
         role: "user",
         content: [
+          // Image first — Azure OpenAI vision docs recommend image-before-text
+          // for single-image prompts to improve attention-to-image-detail.
+          { type: "image", image: photoUrl },
           {
             type: "text",
-            text: "Describe the child in this photo for a children's book illustrator. You MUST cover three things: (1) FACE features — hair (color, type, length, style — be specific about whether bangs/fringe are present and how they fall), skin tone, eye shape and color, distinguishing features (dimples, freckles, glasses, gap teeth, scars, etc.). (2) CLOTHING — describe what the child is wearing in detail. If they're wearing traditional cultural clothing (galabeya / thobe / hijab / abaya / etc.), name it explicitly — this is critical because the illustrator will lock the outfit across the entire 17-page book. Do NOT default to generic 't-shirt + shorts' if traditional clothing is visible. (3) If shoes are visible, describe them too. Do NOT include the background, the photographer's intent, or speculate about emotion / personality. Output 2–4 sentences in ENGLISH only. Do NOT include the child's name. Just visual facts that anchor identity across illustrated scenes.",
+            text: `You are extracting visual identity facts from a child photo for a 17-page picture-book illustrator who will see your description but not the photo itself.
+
+STEP 1 — Look carefully at the image. Note (silently, do not output): hair details, skin tone, eye details, distinguishing features, what they're wearing top-to-bottom, and any culturally specific clothing.
+
+STEP 2 — Output a 2–4 sentence description in ENGLISH covering exactly:
+
+(1) FACE — hair (color; type [straight / wavy / curly / coily]; length; style — be specific about whether bangs/fringe are present and how they fall), skin tone (use ONE of these anchor terms: very fair / fair / light olive / olive / tan / medium brown / deep brown / very deep — pick the closest match, do NOT invent freeform terms like "wheat" or "warm tan"), eye shape and color, distinguishing features (dimples, freckles, glasses, gap teeth, scars, birthmarks).
+
+(2) CLOTHING — describe what the child is wearing in detail. If traditional or culturally specific clothing is visible (galabeya / thobe / hijab / abaya / kuttab cap / festive Eid dress / school uniform / etc.), NAME IT EXPLICITLY. The illustrator will lock the outfit across all 17 pages of the book, so do NOT default to "t-shirt and shorts" if traditional clothing is actually visible.
+
+(3) SHOES — only if visible.
+
+DO NOT include: the background, the photographer's intent or composition, the child's emotion or personality, the child's name, or any guess about details that aren't clearly visible.
+
+UNCERTAINTY HANDLING — if any of the three categories above is ambiguous in the photo (e.g. torso cropped so you can't tell if there's traditional clothing, face partially in shadow, only head visible), say so EXPLICITLY rather than guessing. Examples:
+  - "Clothing not clearly visible — only face and shoulders are in frame."
+  - "Eye color not readable in this lighting."
+  - "Hair length unclear — visible portion only goes to shoulders."
+The illustrator can fall back to defaults if you flag uncertainty; a confident wrong description (e.g. confabulating a t-shirt when the torso isn't visible) locks an incorrect outfit across all 17 pages.`,
           },
-          { type: "image", image: photoUrl },
         ],
       },
     ],

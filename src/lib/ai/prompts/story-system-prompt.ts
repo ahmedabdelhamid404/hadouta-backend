@@ -103,9 +103,21 @@ Do NOT pad with filler scenes. Each page advances the arc.
 
 ${FEW_SHOT_BLOCK()}
 
-# FINAL REMINDER
+# FINAL REMINDER (re-anchor — the model has just read 3 long examples; re-state the non-negotiables before generating)
 
-Produce **exactly ${pageCount} pages** in the \`pages\` array, numbered 1 through ${pageCount}. The few-shot examples were 8 pages — your output is ${pageCount} pages. Do not anchor on the example length.`;
+1. **Length**: produce EXACTLY ${pageCount} pages in the \`pages\` array, numbered 1 through ${pageCount}. The few-shot examples are 8 pages — your output is ${pageCount} pages, not 8. Do not anchor on the example length.
+
+2. **Moral via ACTION, not narration**. Never write "تعلم/عَرَف أن..." or any sentence that explicitly spells out the lesson on a page. The \`moralStatement\` field is the only place where the lesson is named explicitly; the moralMoment page text shows the moral *embedded in the protagonist's choice and action*.
+
+3. **The CHILD solves the problem** — never a parent, teacher, neighbor, or other adult. Adults can be present (ماما، أبلة، الست أم محمد) but they must NEVER be the solution. If your draft has an adult resolving the conflict, rewrite it.
+
+4. **Three distinct attempts** in the challenge act — not two, not one. Attempt 1 fails one way, attempt 2 fails differently, attempt 3 (the smart/brave/kind one) succeeds. If your draft has fewer than 3 attempts, the structure is wrong — rewrite.
+
+5. **Dialogue in « » uses Egyptian Arabic only** — never MSA (sounds stilted to Egyptian families), never Gulf vocabulary (شلون، وايد، ترى).
+
+6. **Vary phrasing**. The few-shot examples contain memorable lines ("حست بحاجة دافية في صدرها"، "حس إنه أكبر من الصبح بعشر سنين"، "قلبها بقى أكبر من فستانها الجديد"). DO NOT copy those phrases verbatim into THIS story. Invent fresh body-state and emotion-as-action language for THIS specific child. If your draft contains a verbatim phrase from any example, rewrite it.
+
+7. **Output ONLY the structured JSON object**. No markdown wrapper, no preamble, no closing summary. The schema is enforced — every field listed in the per-page metadata section above (act, emotionalBeat, moralMoment, charactersOnPage, keyObjectOrDetail, scene, text) MUST appear on every page.`;
 }
 
 // =============================================================================
@@ -252,19 +264,20 @@ function FEW_SHOT_BLOCK(): string {
     const story = example.story;
     return `## Example ${idx + 1} — theme: ${ctx.theme} / moral: ${ctx.moralValue} / age: ${ctx.childAgeBand}
 
-INPUT CONTEXT:
+INPUT CONTEXT (what the customer's user message provides):
 - Child: ${ctx.childName}, ${ctx.childAgeExact} years old, ${ctx.childGender}
 - Theme: ${ctx.theme}
 - Moral: ${ctx.moralValue}
 ${ctx.specialOccasion ? `- Special occasion: ${ctx.specialOccasion}` : ""}
 
-EXPECTED OUTPUT:
+EXPECTED OUTPUT (the structured JSON object — every top-level field below is REQUIRED, and every page object MUST contain ALL of: number, act, emotionalBeat, moralMoment, charactersOnPage, keyObjectOrDetail, text, scene):
 ${JSON.stringify(
   {
     title: story.title,
     dedication: story.dedication,
     coverDescription: story.coverDescription,
     parentDiscussionQuestion: story.parentDiscussionQuestion,
+    moralStatement: (story as { moralStatement?: string }).moralStatement,
     pages: story.pages,
   },
   null,
@@ -274,7 +287,11 @@ ${JSON.stringify(
 
   return `# Few-shot examples
 
-The three examples below show target output. Mimic their voice, register, structure, and cultural anchors — NOT their literal plots. The customer's order specifies a different child / theme / moral / context, and you must invent a fresh story for that combination.
+The three examples below show target VOICE, REGISTER, STRUCTURE, and CULTURAL ANCHORS. The customer's order specifies a different child / theme / moral / context, and you must invent a fresh story for that combination.
+
+**IMPORTANT — examples show STYLE, not phrases to copy.** Invent fresh body-state and emotion-as-action language for each new story. The examples contain memorable lines like "حست بحاجة دافية في صدرها"، "حس إنه أكبر من الصبح بعشر سنين"، "قلبها بقى أكبر من فستانها الجديد" — DO NOT reuse these verbatim. Each new child deserves their own freshly-imagined sensory and emotional language. If your draft contains a verbatim phrase from any example, rewrite it.
+
+**IMPORTANT — schema conformance.** The EXPECTED OUTPUT JSON below shows every required field. Your output MUST include all top-level fields (title, dedication, coverDescription, parentDiscussionQuestion, moralStatement, pages) AND every page MUST include all per-page fields (number, act, emotionalBeat, moralMoment, charactersOnPage, keyObjectOrDetail, text, scene). Missing any field will fail schema validation and trigger an expensive retry.
 
 ${sections}`;
 }

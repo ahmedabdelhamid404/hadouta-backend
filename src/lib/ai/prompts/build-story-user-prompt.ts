@@ -84,6 +84,10 @@ export function buildStoryUserPrompt(args: BuildStoryUserPromptArgs): string {
       if (char.descriptionHair) parts.push(`hair: ${char.descriptionHair}`);
       lines.push(`- ${parts.join("; ")}`);
     }
+    lines.push(
+      "",
+      "  When any of these characters is visible in a scene, include their name in that page's `charactersOnPage` array. Use one consistent transliteration of each Arabic name across ALL pages where they appear (e.g. always \"Nour\", never alternating with \"Noor\" or \"Nor\") — the illustration prompt builder uses these names verbatim to inject each character's locked appearance from the Bible.",
+    );
   }
 
   if (order.specialOccasionText) {
@@ -105,9 +109,20 @@ export function buildStoryUserPrompt(args: BuildStoryUserPromptArgs): string {
   }
 
   lines.push("");
+  lines.push(`Produce the structured JSON now. Final checks before you output:`);
   lines.push(
-    `Produce the story now in the structured JSON output format. Apply all craft rules from the system prompt. Output exactly ${pageCount} pages.`,
+    `- Exactly ${pageCount} pages, numbered 1..${pageCount}.`,
+    `- The protagonist (${order.childName ?? "the child"}) solves the problem themselves — no adult rescues.`,
+    `- Three distinct attempts during the challenge act; the third one succeeds.`,
+    `- Moral shown through action on the moralMoment page; never declared in narration.`,
+    `- Dialogue in « » uses Egyptian Arabic only (no MSA, no Gulf vocabulary).`,
   );
+  if (supportingCharacters.length > 0) {
+    lines.push(
+      `- Supporting characters (${supportingCharacters.map((c) => c.name).join(", ")}) appear in matching pages' \`charactersOnPage\` arrays with consistent transliteration across pages.`,
+    );
+  }
+  lines.push(`- Every page object MUST include: number, act, emotionalBeat, moralMoment, charactersOnPage, keyObjectOrDetail, text, scene.`);
 
   return lines.join("\n");
 }

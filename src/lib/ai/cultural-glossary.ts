@@ -3,7 +3,11 @@
 //   - latin: Latin transliteration (lookup key)
 //   - description: full English description for the illustration prompt
 //   - notExamples: explicit negative examples (what it is NOT) — Flux honors negatives strongly
-//   - triggerKeywords: keywords that trigger inclusion when found in story/wizard inputs
+//   - triggerKeywords: BILINGUAL — both Arabic-script terms and English/Latin
+//     keywords. The trigger logic scans story text (Arabic) + scene/cover
+//     descriptions (English) + wizard inputs (mixed). Arabic-only triggers
+//     would miss English-language scene descriptions; English-only triggers
+//     silently miss Arabic story text where most cultural references appear.
 //
 // The Bible generator scans storyJson + wizard inputs for trigger keywords
 // and includes matching entries in bibleJson.culturalNotes so per-page
@@ -28,7 +32,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
     description:
       "Round Egyptian Eid biscuits dusted with powdered sugar; pale yellow color; sometimes filled with dates or nuts; served on round metal trays at family gatherings during Eid el-Fitr",
     notExamples: ["NOT chocolate chip cookies", "NOT macarons", "NOT Western shortbread"],
-    triggerKeywords: ["eid", "kahk", "biscuit", "celebration food"],
+    triggerKeywords: [
+      "eid", "kahk", "biscuit", "celebration food",
+      "كحك", "عيد", "العيد", "عيد الفطر", "بسكويت",
+    ],
   },
   {
     ar: "مكرونة بشاميل",
@@ -41,7 +48,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
       "NOT plain pasta",
       "NOT Italian-style red-sauce lasagna",
     ],
-    triggerKeywords: ["pasta", "makarona", "family dinner", "casserole"],
+    triggerKeywords: [
+      "pasta", "makarona", "family dinner", "casserole",
+      "مكرونة", "بشاميل", "مكرونة بشاميل", "غدا", "الغدا",
+    ],
   },
   {
     ar: "كشري",
@@ -49,7 +59,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
     description:
       "Egyptian street food: stacked layers of rice + brown lentils + small pasta + chickpeas, topped with crispy fried onions and red tomato-vinegar sauce, served in a takeaway bowl or street-stall plate",
     notExamples: ["NOT plain rice", "NOT biryani", "NOT Indian dal"],
-    triggerKeywords: ["street food", "koshari", "lunch"],
+    triggerKeywords: [
+      "street food", "koshari", "lunch",
+      "كشري", "أكل شارع",
+    ],
   },
   {
     ar: "فطير",
@@ -57,7 +70,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
     description:
       "Egyptian layered flaky pastry; can be sweet (with honey, powdered sugar) or savory (with cheese, ground meat); served sliced into wedges from a round pan; thin gold-brown layered look",
     notExamples: ["NOT pizza", "NOT croissant", "NOT pancake"],
-    triggerKeywords: ["fateer", "pastry", "bakery"],
+    triggerKeywords: [
+      "fateer", "pastry", "bakery",
+      "فطير", "فطيرة", "مخبز",
+    ],
   },
   {
     ar: "ملوخية",
@@ -65,7 +81,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
     description:
       "Egyptian green soup made from finely chopped jute leaves cooked in chicken or rabbit broth; deep emerald green; served in a deep bowl with rice and torn flat bread on the side",
     notExamples: ["NOT spinach soup", "NOT pesto sauce"],
-    triggerKeywords: ["molokhia", "soup", "green dish"],
+    triggerKeywords: [
+      "molokhia", "soup", "green dish",
+      "ملوخية", "شوربة",
+    ],
   },
   {
     ar: "فول",
@@ -73,7 +92,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
     description:
       "Egyptian fava beans dish; mashed brown beans with olive oil, lemon, and cumin; served in a small ceramic bowl with flat bread; typical breakfast staple",
     notExamples: ["NOT hummus", "NOT refried beans", "NOT bean salad"],
-    triggerKeywords: ["breakfast", "ful", "fava beans"],
+    triggerKeywords: [
+      "breakfast", "ful", "fava beans",
+      "فول", "فطار", "الفطار", "إفطار",
+    ],
   },
   {
     ar: "عيش بلدي",
@@ -85,7 +107,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
       "NOT naan",
       "NOT tortilla",
     ],
-    triggerKeywords: ["bread", "aish", "baladi"],
+    triggerKeywords: [
+      "bread", "aish", "baladi",
+      "عيش", "خبز", "رغيف", "عيش بلدي",
+    ],
   },
   {
     ar: "شاي",
@@ -93,7 +118,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
     description:
       "Egyptian tea brewed dark and strong in a small clear glass (NOT a teacup with handle); often served on a small tray; sometimes with fresh mint sprigs",
     notExamples: ["NOT English teacup with handle", "NOT bubble tea", "NOT iced tea"],
-    triggerKeywords: ["tea", "shay", "drink", "morning"],
+    triggerKeywords: [
+      "tea", "shay", "drink", "morning",
+      "شاي", "كباية شاي", "صباح",
+    ],
   },
   {
     ar: "جلابية",
@@ -101,7 +129,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
     description:
       "Egyptian long traditional gown reaching the ankles; loose-fitting; typically worn by adult men or older women; cotton or linen; muted colors (cream, navy, brown, gray)",
     notExamples: ["NOT Saudi thobe (different cut)", "NOT abaya"],
-    triggerKeywords: ["traditional clothing", "galabeya", "grandfather", "village"],
+    triggerKeywords: [
+      "traditional clothing", "galabeya", "grandfather", "village",
+      "جلابية", "جلباب", "جدو", "الحاج", "ست عجوز", "قرية",
+    ],
   },
   {
     ar: "جامع",
@@ -112,7 +143,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
       "NOT massive Saudi-style mosque",
       "NOT Iranian-style mosque with blue tiles",
     ],
-    triggerKeywords: ["mosque", "gama", "prayer", "neighborhood"],
+    triggerKeywords: [
+      "mosque", "gama", "prayer", "neighborhood",
+      "جامع", "مسجد", "صلاة", "حارة",
+    ],
   },
   {
     ar: "شارع القاهرة",
@@ -123,7 +157,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
       "NOT suburban American street with houses + lawns",
       "NOT Gulf-style boulevards with skyscrapers",
     ],
-    triggerKeywords: ["street", "neighborhood", "outside", "balcony", "apartment"],
+    triggerKeywords: [
+      "street", "neighborhood", "outside", "balcony", "apartment",
+      "شارع", "الشارع", "الحارة", "العمارة", "بلكونة", "البلكونة", "بره",
+    ],
   },
   {
     ar: "شقة قاهرية",
@@ -131,7 +168,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
     description:
       "Typical Cairo apartment interior: terracotta tile floors, cream walls, ceiling fan, framed family photos, balcony doors with thin curtains, simple sofa with patterned throw pillows",
     notExamples: ["NOT American suburban house", "NOT Gulf-style luxury villa"],
-    triggerKeywords: ["home", "apartment", "living room", "indoor"],
+    triggerKeywords: [
+      "home", "apartment", "living room", "indoor",
+      "شقة", "البيت", "الصالة", "الأوضة", "أوضة", "صالة",
+    ],
   },
   {
     ar: "فانوس رمضان",
@@ -139,7 +179,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
     description:
       "Ramadan lantern: small handheld colorful lantern made of tin and stained glass; warm interior candle glow; geometric patterns; held by children walking around at dusk",
     notExamples: ["NOT Halloween jack-o-lantern", "NOT Western Christmas lantern"],
-    triggerKeywords: ["ramadan", "fanous", "lantern", "ramadan night"],
+    triggerKeywords: [
+      "ramadan", "fanous", "lantern", "ramadan night",
+      "رمضان", "فانوس", "فوانيس", "إفطار رمضان", "ليالي رمضان",
+    ],
   },
   {
     ar: "سكر ملون",
@@ -147,7 +190,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
     description:
       "Egyptian rock-candy: hard colored sugar pieces (red, yellow, green) sold in small paper cones at sweet shops; traditional during Mawlid",
     notExamples: ["NOT generic Western candy", "NOT lollipops"],
-    triggerKeywords: ["mawlid", "candy", "sweet shop", "festival"],
+    triggerKeywords: [
+      "mawlid", "candy", "sweet shop", "festival",
+      "مولد", "المولد", "سكر ملون", "حلويات", "حلويات المولد",
+    ],
   },
   {
     ar: "حفلة عيد ميلاد",
@@ -159,7 +205,10 @@ export const CULTURAL_GLOSSARY: readonly GlossaryEntry[] = [
       "NOT pinata setup",
       "NOT bouncy castle at the park",
     ],
-    triggerKeywords: ["birthday", "party", "celebration", "cake"],
+    triggerKeywords: [
+      "birthday", "party", "celebration", "cake",
+      "عيد ميلاد", "ميلاد", "حفلة", "تورتة", "شمعة", "شموع", "بالونات",
+    ],
   },
 ];
 
