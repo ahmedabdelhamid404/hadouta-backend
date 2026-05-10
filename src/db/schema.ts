@@ -143,6 +143,15 @@ export const generationStatusEnum = pgEnum("generation_status", [
   "delivering",
   "delivered",
   "failed",
+  // ADR-029 / V7 fix (2026-05-10): retry-queue statuses.
+  // failed_retry_pending: transient failure (503/network/Cloudinary blip);
+  //   background worker (src/jobs/retry-failed-generations.ts) picks up at
+  //   next_retry_at and resumes from where bookPages stopped.
+  // failed_human_review: permanent failure (safety block, billing depleted,
+  //   auth error, exhausted retry budget); admin must intervene before any
+  //   further retry.
+  "failed_retry_pending",
+  "failed_human_review",
 ]);
 
 // ============================================================================
@@ -377,6 +386,15 @@ export const generations = pgTable("generations", {
   rejectionReason: text("rejection_reason"),
   retryCount: integer("retry_count").notNull().default(0),
   errorLog: text("error_log"),
+  // ADR-029 / V7 fix (2026-05-10): retry-queue tracking columns.
+  // nextRetryAt is read by the cron worker; null on terminal statuses.
+  // lastError is a short label (e.g. "Gemini Capacity (Tier 1)") for admin
+  // queue glance; errorLog stays as the full stack/message.
+  // failureSummary is the structured PageFailure[] from the orchestrator —
+  // drives the admin per-page failure table + worker retryable-page selection.
+  nextRetryAt: timestamp("next_retry_at", { withTimezone: true }),
+  lastError: text("last_error"),
+  failureSummary: jsonb("failure_summary"),
   startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),

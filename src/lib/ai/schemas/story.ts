@@ -70,6 +70,14 @@ export const storyPageSchema = z.object({
     .describe(
       "ONE specific visual prop or detail anchoring this page. Be concrete: 'red satin ribbon in her right hand', 'brass tray of kahk biscuits', 'navy school satchel with green stitching' — NOT generic ('a toy', 'food', 'a bag'). Locks accessory state across pages so props don't drift between renders.",
     ),
+  locationName: z
+    .string()
+    .min(2)
+    .max(80)
+    .optional()
+    .describe(
+      "Name of the location for THIS page. MUST match either settingBible.primaryLocation OR one of settingBible.secondaryLocations[].name verbatim. The illustration prompt builder uses this to inject the correct location's locked visual details. If omitted, the primary location is used. Example values: 'Cairo middle-class apartment' (primary), 'neighborhood mosque' (secondary), 'Maadi park' (secondary). For single-setting stories, omit on every page (primary will be used). For multi-setting stories, name the location on EVERY page so apartment-then-mosque-then-apartment renders correctly.",
+    ),
 });
 
 export type StoryPage = z.infer<typeof storyPageSchema>;
@@ -93,6 +101,21 @@ export const storyOutputSchema = z.object({
     .max(280)
     .describe(
       "Short English scene description for the COVER page. Iconic + emotional summary of the whole story — 1–2 sentences. DO NOT include character/style/setting boilerplate (those come from the Bible). Example: 'Hena holding a tray of kahk surrounded by friends in her living room, golden afternoon light.'",
+    ),
+  coverLocationName: z
+    .string()
+    .min(2)
+    .max(80)
+    .optional()
+    .describe(
+      "Location for the COVER scene. Same lookup rules as page-level locationName — must match settingBible.primaryLocation OR a secondaryLocations[].name verbatim. Omit to default to primary. Example: 'Cairo middle-class apartment'.",
+    ),
+  coverCharactersOnPage: z
+    .array(z.string().min(1))
+    .min(1)
+    .optional()
+    .describe(
+      "Characters visible on the COVER. Same shape as page-level charactersOnPage. ALWAYS includes the protagonist; add supporting characters if they appear in the cover scene (e.g. friendship-theme covers often show protagonist + friend). If omitted, the illustration prompt builder falls back to page 1's charactersOnPage. Drives supporting-character appearance injection on the cover render.",
     ),
   parentDiscussionQuestion: z
     .string()

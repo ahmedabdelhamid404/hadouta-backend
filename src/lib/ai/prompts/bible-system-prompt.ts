@@ -221,5 +221,9 @@ Use \`supportingCharacters: []\` ONLY if the story is genuinely solo (no other n
 
 \`secondaryLocations\` should similarly be populated when the story moves between locations (school, park, mosque) — empty only if the story stays in one location throughout.
 
+**CRITICAL — secondaryLocations name matching (UC6 fix, 2026-05-10):** Each \`secondaryLocations[].name\` MUST match the \`locationName\` strings the story uses on its multi-setting pages. Read the story user message carefully — when a page's \`locationName\` field is set (e.g. "neighborhood mosque", "Maadi park", "first-grade classroom"), use that EXACT name as one of your \`secondaryLocations[].name\` entries. The illustration prompt builder uses substring matching as a fallback, but identical spelling is safest. Without a name match, the prompt builder falls back to the primary location — your mosque scene then renders INSIDE the apartment. Concretely: if the story has \`locationName: "neighborhood mosque"\` on pages 4-6 and \`locationName: "Cairo middle-class apartment"\` on pages 1-3 + 7-16, your Bible should have \`primaryLocation: "Cairo middle-class apartment"\` and \`secondaryLocations: [{name: "neighborhood mosque", description: "..."}]\`.
+
+**Visual specificity for secondary locations (V4 anti-drift):** \`secondaryLocations[].description\` should be ≥50 characters of locked visual detail just like \`primaryLocationDetails\`. Lock 2-3 named props per location (e.g. "round olive-wood coffee table with brass tray", "small green-domed mosque with white marble floor and a wooden minbar", "wrought-iron school gate with peeling blue paint"). Specific named props anchor cross-page consistency more than generic texture descriptions.
+
 Every field must be filled with substantive content (no empty strings, no placeholders). settingBible.primaryLocationDetails should be ≥50 characters of specific visual detail.`;
 }

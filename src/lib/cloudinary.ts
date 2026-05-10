@@ -64,7 +64,17 @@ export async function uploadImage(
       },
       (error, uploaded) => {
         if (error || !uploaded) {
-          reject(error ?? new Error("Cloudinary upload returned no result"));
+          if (error) {
+            // Preserve http_code from Cloudinary SDK error so categorizeError()
+            // in callers can match by status code (e.g. 401 auth, 413 too-large,
+            // 420 rate-limit) without parsing the message string.
+            const httpCode = (error as { http_code?: number }).http_code;
+            const wrapped = new Error(error.message ?? "Cloudinary upload error") as Error & { http_code?: number };
+            if (httpCode != null) wrapped.http_code = httpCode;
+            reject(wrapped);
+          } else {
+            reject(new Error("Cloudinary upload returned no result"));
+          }
           return;
         }
         resolve({
